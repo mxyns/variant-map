@@ -6,7 +6,6 @@ mod user {
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;
-    use enum_map::{EnumMap, EnumMapValue, HashKey};
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum MyEnum {
@@ -15,6 +14,8 @@ mod user {
         B(i32),
         D(i32),
     }
+
+    /*
 
     impl EnumMapValue for MyEnum {
         type Key = MyEnumKey;
@@ -50,7 +51,11 @@ mod user {
     }
 
     impl HashKey for MyEnumKey {}
+
+    */
 }
+
+
 #[test]
 fn ensure_correct_key() {
     let value = MyEnum::A;
