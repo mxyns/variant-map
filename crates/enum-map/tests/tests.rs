@@ -3,10 +3,10 @@ use enum_map::EnumMapValue;
 use serde_json::{Map, Value};
 
 mod user {
+    use enum_map::{EnumMap, EnumMapValue, HashKey};
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;
-    use enum_map::{EnumMap, EnumMapValue, HashKey};
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum MyEnum {
