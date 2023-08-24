@@ -8,12 +8,7 @@ proc-macro = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[test]]
-name = "tests"
-path = "tests/tests.rs"
-
 [dependencies]
-enum-map = { path = "../enum-map"}
 syn = "2.0.28"
 quote = "1.0.32"
 serde = { version = "1.0.183", features = ["derive"] }

@@ -15,13 +15,13 @@ pub trait EnumMapValue: Sized {
 }
 
 impl<K, V> EnumMap<K, V>
-    where
-        K: HashKey,
+where
+    K: HashKey,
 {
     pub fn insert(&mut self, value: V) -> Option<V>
-        where
-            V: EnumMapValue<Key=K>,
-            K: PartialEq + Hash,
+    where
+        V: EnumMapValue<Key = K>,
+        K: PartialEq + Hash,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
@@ -32,15 +32,15 @@ pub trait HashKey: Eq + Hash {}
 
 #[derive(Debug)]
 pub struct EnumMap<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     inner: HashMap<Key, Value>,
 }
 
 impl<Key, Value> From<HashMap<Key, Value>> for EnumMap<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn from(value: HashMap<Key, Value>) -> Self {
         Self { inner: value }
@@ -48,10 +48,19 @@ impl<Key, Value> From<HashMap<Key, Value>> for EnumMap<Key, Value>
 }
 
 impl<Key, Value> EnumMap<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
-    pub fn new() -> Self {
+    pub fn new(map: HashMap<Key, Value>) -> Self {
+        EnumMap { inner: map }
+    }
+}
+
+impl<Key, Value> Default for EnumMap<Key, Value>
+where
+    Key: HashKey,
+{
+    fn default() -> Self {
         EnumMap {
             inner: HashMap::new(),
         }
@@ -59,13 +68,13 @@ impl<Key, Value> EnumMap<Key, Value>
 }
 
 impl<Key, Value> Serialize for EnumMap<Key, Value>
-    where
-        Key: HashKey + Serialize,
-        Value: Serialize,
+where
+    Key: HashKey + Serialize,
+    Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_seq(Some(self.len()))?;
 
@@ -78,16 +87,16 @@ impl<Key, Value> Serialize for EnumMap<Key, Value>
 }
 
 struct EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     marker: PhantomData<fn() -> EnumMap<Key, Value>>,
 }
 
 impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
-        Value: EnumMapValue<Key=Key> + Deserialize<'de>,
+where
+    Key: HashKey,
+    Value: EnumMapValue<Key = Key> + Deserialize<'de>,
 {
     type Value = EnumMap<Key, Value>;
 
@@ -96,8 +105,8 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
+    where
+        A: SeqAccess<'de>,
     {
         let map_size = seq.size_hint().unwrap_or(0);
         let mut map: HashMap<Key, Value> = HashMap::<Key, Value>::with_capacity(map_size);
@@ -112,13 +121,13 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
 }
 
 impl<'de, K, V> Deserialize<'de> for EnumMap<K, V>
-    where
-        K: HashKey,
-        V: Deserialize<'de> + EnumMapValue<Key=K>,
+where
+    K: HashKey,
+    V: Deserialize<'de> + EnumMapValue<Key = K>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let visitor = EnumMapVisitor::<K, V> {
             marker: PhantomData,
@@ -128,8 +137,8 @@ impl<'de, K, V> Deserialize<'de> for EnumMap<K, V>
 }
 
 impl<Key, Value> Deref for EnumMap<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     type Target = HashMap<Key, Value>;
 
@@ -139,8 +148,8 @@ impl<Key, Value> Deref for EnumMap<Key, Value>
 }
 
 impl<Key, Value> DerefMut for EnumMap<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner

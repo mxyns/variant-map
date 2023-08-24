@@ -1,11 +1,12 @@
-use serde_json::{Map, Value};
 use crate::user::{MyEnum, MyEnumKey};
 use enum_map::EnumMapValue;
+use serde_json::{Map, Value};
 
 mod user {
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;
+    use enum_map::{EnumMap, EnumMapValue, HashKey};
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     pub enum MyEnum {
@@ -14,8 +15,6 @@ mod user {
         B(i32),
         D(i32),
     }
-
-    /*
 
     impl EnumMapValue for MyEnum {
         type Key = MyEnumKey;
@@ -33,7 +32,7 @@ mod user {
 
     impl MyEnum {
         pub fn make_map() -> <MyEnum as EnumMapValue>::Map {
-            EnumMap::new()
+            EnumMap::default()
         }
     }
 
@@ -51,10 +50,7 @@ mod user {
     }
 
     impl HashKey for MyEnumKey {}
-
-    */
 }
-
 
 #[test]
 fn ensure_correct_key() {
@@ -95,7 +91,6 @@ fn insert_get_map() {
     }
 }
 
-
 #[test]
 fn serialize() {
     let mut m = MyEnum::make_map();
@@ -121,25 +116,20 @@ fn serialize() {
         println!("expect~ {:#?}", expect)
     }
 
-
     let value = {
         let value = serde_json::to_value(&m).unwrap();
         let expect = Value::Array(vec![
-            Value::Object(
-                {
-                    let mut d = Map::new();
-                    d.insert("D".to_string(), Value::Number(20.into()));
-                    d
-                }
-            ),
+            Value::Object({
+                let mut d = Map::new();
+                d.insert("D".to_string(), Value::Number(20.into()));
+                d
+            }),
             Value::String("A".to_string()),
-            Value::Object(
-                {
-                    let mut b = Map::new();
-                    b.insert("B".to_string(), Value::Number(69.into()));
-                    b
-                }
-            ),
+            Value::Object({
+                let mut b = Map::new();
+                b.insert("B".to_string(), Value::Number(69.into()));
+                b
+            }),
             Value::String("C".to_string()),
         ]);
 

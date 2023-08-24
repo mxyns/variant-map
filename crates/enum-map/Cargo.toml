@@ -11,6 +11,10 @@ path = "tests/tests.rs"
 
 [dependencies]
 serde = { version = "1.0.183", features = ["derive"] }
+enum-map-derive = { path = "../enum-map-derive", default-features = false, optional = true }
+
+[features]
+derive = ["dep:enum-map-derive"]
 
 [dev-dependencies]
 serde_json = "1.0.104"
