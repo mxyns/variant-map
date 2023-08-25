@@ -4,6 +4,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, DeriveInput, Ident, Variant};
 
+
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
 struct KeyNameAttr {
@@ -28,16 +29,30 @@ impl KeyNameAttr {
 
 #[derive(FromDeriveInput, Default, Debug)]
 #[darling(default, attributes(EnumMap))]
-struct KeyEnumNameAttr {
+struct MapAttr {
     name: Option<String>,
+    map: Option<String>
 }
 
-impl KeyEnumNameAttr {
+impl MapAttr {
     fn enum_name(&self, enum_name: Ident) -> Ident {
         self.name
             .as_ref()
             .map(|name| format_ident!("{}", name))
             .unwrap_or_else(|| enum_name)
+    }
+
+    fn map_impl_mod(&self) -> proc_macro2::TokenStream {
+        match self.map.clone().map(|name| name.to_lowercase()) {
+            Some(name) if name.as_str() == "hashmap"
+                || name.as_str() == "btreemap" => {
+                str::parse::<TokenStream>(name.as_str()).unwrap().into()
+            }
+            None => { quote!(hashmap) }, // default value
+            _ => {
+                panic!("Invalid 'map' argument, available {{ \"hashmap\", \"btreemap\" }}")
+            }
+        }
     }
 }
 
@@ -45,7 +60,9 @@ impl KeyEnumNameAttr {
 // TODO [x] merge make_map with impl EnumMapValue
 // TODO [x] macro_rules for key and map syntactic sugar
 // TODO [x] Index and IndexMut syntactic sugar
-// TODO choose map/table implementation with a derive attribute
+// TODO [x] choose map/table implementation with a derive attribute
+// TODO cleanup -derive code and split into functions
+// TODO add struct version of the map
 // TODO? tight couple EnumMap and EnumMapValue if possible
 // TODO doc
 // TODO publish
@@ -54,10 +71,17 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
 
     let enum_name = &ast.ident;
-    let key_enum_name = {
+
+    let (
+        key_enum_name,
+        impl_base
+    ) = {
         let key_enum_name_attr =
-            KeyEnumNameAttr::from_derive_input(&ast).expect("Wrong enum_name options");
-        key_enum_name_attr.enum_name(format_ident!("{}Key", enum_name))
+            MapAttr::from_derive_input(&ast).expect("Wrong enum_name options");
+        (
+            key_enum_name_attr.enum_name(format_ident!("{}Key", enum_name)),
+            key_enum_name_attr.map_impl_mod()
+        )
     };
 
     let key_enum = match &mut ast.data {
@@ -80,7 +104,7 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                 });
 
                 quote! {
-                    #[derive(Debug, PartialEq, Eq, Hash, _enum_map::serde::Serialize, _enum_map::serde::Deserialize)]
+                    #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::serde::Serialize, ::serde::Deserialize)]
                     enum #key_enum_name {
                         #(#key_variants),*
                     }
@@ -105,10 +129,10 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                     } else {
                         None
                     }
-                    .map(|fields| {
-                        let skip_fields = fields.iter().map(|_| quote!(_));
-                        Some(quote! { (#(#skip_fields),*) })
-                    });
+                        .map(|fields| {
+                            let skip_fields = fields.iter().map(|_| quote!(_));
+                            Some(quote! { (#(#skip_fields),*) })
+                        });
 
                     quote! {
                         #enum_name::#ident #skip_fields => #key_enum_name::#key_name
@@ -116,9 +140,9 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                 });
 
                 quote! {
-                    impl _enum_map::EnumMapValue for #enum_name {
+                    impl MapValue for #enum_name {
                         type Key = #key_enum_name;
-                        type Map = _enum_map::EnumMap<Self::Key, Self>;
+                        type Map = Map<Self::Key, Self>;
 
                         fn to_key(&self) -> Self::Key {
                             match self {
@@ -127,15 +151,15 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                         }
 
 
-                        fn make_map() -> <#enum_name as _enum_map::EnumMapValue>::Map {
-                            _enum_map::EnumMap::default()
+                        fn make_map() -> <#enum_name as MapValue>::Map {
+                           Self::Map::default()
                         }
                     }
                 }
             };
 
             let impl_hash_key_for_enum_key_quote = quote! {
-                impl _enum_map::HashKey for #key_enum_name {}
+                impl HashKey for #key_enum_name {}
             };
 
             quote! {
@@ -144,6 +168,9 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                 const _: () = {
                     #[allow(unused_extern_crates, clippy::useless_attribute)]
                     extern crate enum_map as _enum_map;
+                    use _enum_map::common::*;
+                    use _enum_map::#impl_base::*;
+                    use _enum_map::serde;
 
                     #key_enum_quote
 

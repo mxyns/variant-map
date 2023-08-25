@@ -1,82 +1,75 @@
 use serde::de::{DeserializeOwned, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 
-pub trait EnumMapValue: Sized {
-    type Key;
-    type Map;
+use crate::common::MapValue;
 
-    fn to_key(&self) -> Self::Key;
+pub trait HashKey: Ord + Eq + Hash {}
 
-    fn make_map() -> Self::Map;
+#[derive(Debug)]
+pub struct Map<Key, Value>
+    where
+        Key: HashKey,
+{
+    inner: BTreeMap<Key, Value>,
 }
 
-impl<K, V> EnumMap<K, V>
-where
-    K: HashKey,
+impl<K, V> Map<K, V>
+    where
+        K: HashKey,
 {
     pub fn insert(&mut self, value: V) -> Option<V>
-    where
-        K: PartialEq + Hash,
-        V: EnumMapValue<Key = K>,
+        where
+            K: HashKey,
+            V: MapValue<Key=K>,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
     }
 }
 
-pub trait HashKey: Eq + Hash {}
-
-#[derive(Debug)]
-pub struct EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> From<BTreeMap<Key, Value>> for Map<Key, Value>
+    where
+        Key: HashKey,
 {
-    inner: HashMap<Key, Value>,
-}
-
-impl<Key, Value> From<HashMap<Key, Value>> for EnumMap<Key, Value>
-where
-    Key: HashKey,
-{
-    fn from(value: HashMap<Key, Value>) -> Self {
-        Self { inner: value }
+    fn from(value: BTreeMap<Key, Value>) -> Self {
+        Map::new(value)
     }
 }
 
-impl<Key, Value> EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> Map<Key, Value>
+    where
+        Key: HashKey,
 {
-    pub fn new(map: HashMap<Key, Value>) -> Self {
-        EnumMap { inner: map }
+    pub fn new(map: BTreeMap<Key, Value>) -> Self {
+        Map { inner: map }
     }
 }
 
-impl<Key, Value> Default for EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> Default for Map<Key, Value>
+    where
+        Key: HashKey,
 {
     fn default() -> Self {
-        EnumMap {
-            inner: HashMap::new(),
+        Map {
+            inner: BTreeMap::new(),
         }
     }
 }
 
-impl<Key, Value> Serialize for EnumMap<Key, Value>
-where
-    Key: HashKey,
-    Value: Serialize,
+impl<Key, Value> Serialize for Map<Key, Value>
+    where
+        Key: HashKey,
+        Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         let mut map = serializer.serialize_seq(Some(self.len()))?;
 
@@ -89,47 +82,46 @@ where
 }
 
 struct EnumMapVisitor<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
-    marker: PhantomData<fn() -> EnumMap<Key, Value>>,
+    marker: PhantomData<fn() -> Map<Key, Value>>,
 }
 
 impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
-where
-    Key: HashKey,
-    Value: EnumMapValue<Key = Key> + DeserializeOwned,
+    where
+        Key: HashKey,
+        Value: MapValue<Key=Key> + DeserializeOwned,
 {
-    type Value = EnumMap<Key, Value>;
+    type Value = Map<Key, Value>;
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
         write!(formatter, "EnumMapVisitor expects to receive a map of <EnumKey, Enum> with untagged Enum variants and EnumKey serializing to Enum variants' names ")
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
+        where
+            A: SeqAccess<'de>,
     {
-        let map_size = seq.size_hint().unwrap_or(0);
-        let mut map: HashMap<Key, Value> = HashMap::<Key, Value>::with_capacity(map_size);
+        let mut map: BTreeMap<Key, Value> = BTreeMap::<Key, Value>::new();
 
         while let Some(value) = seq.next_element()? {
             let variant: Value = value;
             map.insert(variant.to_key(), variant);
         }
 
-        Ok(EnumMap::from(map))
+        Ok(Map::from(map))
     }
 }
 
-impl<'de, Key, Value> Deserialize<'de> for EnumMap<Key, Value>
-where
-    Key: HashKey,
-    Value: EnumMapValue<Key = Key> + DeserializeOwned,
+impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
+    where
+        Key: HashKey,
+        Value: MapValue<Key=Key> + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         let visitor = EnumMapVisitor::<Key, Value> {
             marker: PhantomData,
@@ -138,29 +130,29 @@ where
     }
 }
 
-impl<Key, Value> Deref for EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> Deref for Map<Key, Value>
+    where
+        Key: HashKey,
 {
-    type Target = HashMap<Key, Value>;
+    type Target = BTreeMap<Key, Value>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<Key, Value> DerefMut for EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> DerefMut for Map<Key, Value>
+    where
+        Key: HashKey,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<Key, Value> Index<Key> for EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> Index<Key> for Map<Key, Value>
+    where
+        Key: HashKey,
 {
     type Output = Value;
 
@@ -169,9 +161,9 @@ where
     }
 }
 
-impl<Key, Value> IndexMut<Key> for EnumMap<Key, Value>
-where
-    Key: HashKey,
+impl<Key, Value> IndexMut<Key> for Map<Key, Value>
+    where
+        Key: HashKey,
 {
     fn index_mut(&mut self, index: Key) -> &mut Self::Output {
         self.inner.get_mut(&index).unwrap()

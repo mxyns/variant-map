@@ -1,9 +1,10 @@
 use crate::user::{MyEnum, MyEnumKey};
-use enum_map::EnumMapValue;
-use serde_json::{Map, Value};
+use enum_map::hashmap::{EnumMapValue, Map};
+use serde_json::{Map as SerdeMap, Value};
+use enum_map::common::MapValue;
 
 mod user {
-    use enum_map::{EnumMap, EnumMapValue, HashKey};
+    use enum_map::hashmap::{Map, EnumMapValue, HashKey};
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;
@@ -18,7 +19,7 @@ mod user {
 
     impl EnumMapValue for MyEnum {
         type Key = MyEnumKey;
-        type Map = EnumMap<Self::Key, Self>;
+        type Map = Map<Self::Key, Self>;
 
         fn to_key(&self) -> Self::Key {
             match self {
@@ -28,11 +29,9 @@ mod user {
                 MyEnum::D(_) => MyEnumKey::D,
             }
         }
-    }
 
-    impl MyEnum {
-        pub fn make_map() -> <MyEnum as EnumMapValue>::Map {
-            EnumMap::default()
+        fn make_map() -> Self::Map {
+            Map::default()
         }
     }
 
@@ -80,13 +79,13 @@ fn insert_get_map() {
         assert_eq!(variant_a, MyEnum::A);
     }
     {
-        let variant_b = m.remove(&<MyEnum as EnumMapValue>::Key::B).unwrap();
+        let variant_b = m.remove(&<MyEnum as MapValue>::Key::B).unwrap();
         assert_eq!(variant_b, MyEnum::B(0))
     }
     m.insert(MyEnum::B(0));
     m.insert(MyEnum::B(10));
     {
-        let variant_b = m.remove(&<MyEnum as EnumMapValue>::Key::B).unwrap();
+        let variant_b = m.remove(&<MyEnum as MapValue>::Key::B).unwrap();
         assert_eq!(variant_b, MyEnum::B(10))
     }
 }
@@ -120,13 +119,13 @@ fn serialize() {
         let value = serde_json::to_value(&m).unwrap();
         let expect = Value::Array(vec![
             Value::Object({
-                let mut d = Map::new();
+                let mut d = SerdeMap::new();
                 d.insert("D".to_string(), Value::Number(20.into()));
                 d
             }),
             Value::String("A".to_string()),
             Value::Object({
-                let mut b = Map::new();
+                let mut b = SerdeMap::new();
                 b.insert("B".to_string(), Value::Number(69.into()));
                 b
             }),
@@ -139,7 +138,7 @@ fn serialize() {
     };
 
     {
-        let m2: <MyEnum as EnumMapValue>::Map = serde_json::from_value(value).unwrap();
+        let m2: <MyEnum as MapValue>::Map = serde_json::from_value(value).unwrap();
 
         let m_str = serde_json::to_string(&m).unwrap();
         let m2_str = serde_json::to_string(&m2).unwrap();

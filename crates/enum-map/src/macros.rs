@@ -1,10 +1,10 @@
 #[macro_export]
 macro_rules! as_key {
     ($T:ty) => {
-        <$T as EnumMapValue>::Key
+        <$T as MapValue>::Key
     };
     ($T:ty, $V:ident) => {
-        <$T as EnumMapValue>::Key::$V
+        <$T as MapValue>::Key::$V
     };
 }
 pub use as_key;
@@ -12,7 +12,7 @@ pub use as_key;
 #[macro_export]
 macro_rules! as_map {
     ($T:ty) => {
-        <$T as EnumMapValue>::Map
+        <$T as MapValue>::Map
     };
 }
 pub use as_map;
