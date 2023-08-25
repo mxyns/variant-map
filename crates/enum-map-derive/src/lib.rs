@@ -45,7 +45,7 @@ impl KeyEnumNameAttr {
 
 
 // TODO [x] rename keys and key enum
-// TODO merge make_map with impl EnumMapValue
+// TODO [x] merge make_map with impl EnumMapValue
 // TODO macro_rules for key and map syntactic sugar
 // TODO Index and IndexMut syntactic sugar
 // TODO choose map/table implementation with a derive attribute
@@ -126,14 +126,9 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                                 #(#match_case),*
                             }
                         }
-                    }
-                }
-            };
 
-            let impl_enum_methods_quote = {
-                quote! {
-                    impl #enum_name {
-                        pub fn make_map() -> <#enum_name as _enum_map::EnumMapValue>::Map {
+
+                        fn make_map() -> <#enum_name as _enum_map::EnumMapValue>::Map {
                             _enum_map::EnumMap::default()
                         }
                     }
@@ -155,9 +150,6 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
 
                     #[automatically_derived]
                     #impl_enum_map_value_for_enum_quote
-
-                    #[automatically_derived]
-                    #impl_enum_methods_quote
 
                     #[automatically_derived]
                     #impl_hash_key_for_enum_key_quote

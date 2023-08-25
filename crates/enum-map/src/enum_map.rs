@@ -12,6 +12,8 @@ pub trait EnumMapValue: Sized {
     type Map;
 
     fn to_key(&self) -> Self::Key;
+
+    fn make_map() -> Self::Map;
 }
 
 impl<K, V> EnumMap<K, V>
