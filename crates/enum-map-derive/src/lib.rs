@@ -29,11 +29,10 @@ impl KeyNameAttr {
 #[derive(FromDeriveInput, Default, Debug)]
 #[darling(default, attributes(EnumMap))]
 struct KeyEnumNameAttr {
-    name: Option<String>
+    name: Option<String>,
 }
 
 impl KeyEnumNameAttr {
-
     fn enum_name(&self, enum_name: Ident) -> Ident {
         self.name
             .as_ref()
@@ -42,13 +41,12 @@ impl KeyEnumNameAttr {
     }
 }
 
-
-
 // TODO [x] rename keys and key enum
 // TODO [x] merge make_map with impl EnumMapValue
-// TODO macro_rules for key and map syntactic sugar
-// TODO Index and IndexMut syntactic sugar
+// TODO [!] macro_rules for key and map syntactic sugar
+// TODO [x] Index and IndexMut syntactic sugar
 // TODO choose map/table implementation with a derive attribute
+// TODO? tight couple EnumMap and EnumMapValue if possible
 // TODO doc
 // TODO publish
 #[proc_macro_derive(EnumMap, attributes(EnumMap, key_name))]
@@ -57,7 +55,8 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
 
     let enum_name = &ast.ident;
     let key_enum_name = {
-        let key_enum_name_attr = KeyEnumNameAttr::from_derive_input(&ast).expect("Wrong enum_name options");
+        let key_enum_name_attr =
+            KeyEnumNameAttr::from_derive_input(&ast).expect("Wrong enum_name options");
         key_enum_name_attr.enum_name(format_ident!("{}Key", enum_name))
     };
 
@@ -158,7 +157,6 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
         }
         _ => syn::Error::new(ast.span(), "EnumMap works only on enums")
             .into_compile_error()
-            .into(),
     };
 
     let result = quote! {

@@ -1,11 +1,11 @@
-use serde::de::{SeqAccess, Visitor};
+use serde::de::{DeserializeOwned, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 pub trait EnumMapValue: Sized {
     type Key;
@@ -22,8 +22,8 @@ where
 {
     pub fn insert(&mut self, value: V) -> Option<V>
     where
-        V: EnumMapValue<Key = K>,
         K: PartialEq + Hash,
+        V: EnumMapValue<Key = K>,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
@@ -71,7 +71,7 @@ where
 
 impl<Key, Value> Serialize for EnumMap<Key, Value>
 where
-    Key: HashKey + Serialize,
+    Key: HashKey,
     Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -98,7 +98,7 @@ where
 impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
 where
     Key: HashKey,
-    Value: EnumMapValue<Key = Key> + Deserialize<'de>,
+    Value: EnumMapValue<Key = Key> + DeserializeOwned,
 {
     type Value = EnumMap<Key, Value>;
 
@@ -122,16 +122,16 @@ where
     }
 }
 
-impl<'de, K, V> Deserialize<'de> for EnumMap<K, V>
+impl<'de, Key, Value> Deserialize<'de> for EnumMap<Key, Value>
 where
-    K: HashKey,
-    V: Deserialize<'de> + EnumMapValue<Key = K>,
+    Key: HashKey,
+    Value: EnumMapValue<Key = Key> + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let visitor = EnumMapVisitor::<K, V> {
+        let visitor = EnumMapVisitor::<Key, Value> {
             marker: PhantomData,
         };
         deserializer.deserialize_seq(visitor)
@@ -155,5 +155,25 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
+    }
+}
+
+impl<Key, Value> Index<Key> for EnumMap<Key, Value>
+where
+    Key: HashKey,
+{
+    type Output = Value;
+
+    fn index(&self, index: Key) -> &Self::Output {
+        self.inner.get(&index).unwrap()
+    }
+}
+
+impl<Key, Value> IndexMut<Key> for EnumMap<Key, Value>
+where
+    Key: HashKey,
+{
+    fn index_mut(&mut self, index: Key) -> &mut Self::Output {
+        self.inner.get_mut(&index).unwrap()
     }
 }
