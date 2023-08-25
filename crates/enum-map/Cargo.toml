@@ -15,6 +15,7 @@ enum-map-derive = { path = "../enum-map-derive", default-features = false, optio
 
 [features]
 derive = ["dep:enum-map-derive"]
+macros = []
 
 [dev-dependencies]
 serde_json = "1.0.104"

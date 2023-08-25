@@ -4,5 +4,5 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-enum-map = { path="../crates/enum-map", features = ["derive"]}
+enum-map = { path="../crates/enum-map", features = ["derive", "macros"]}
 serde = {version = "1.0.183", features = ["derive"]}

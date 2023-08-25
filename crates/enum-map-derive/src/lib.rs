@@ -43,7 +43,7 @@ impl KeyEnumNameAttr {
 
 // TODO [x] rename keys and key enum
 // TODO [x] merge make_map with impl EnumMapValue
-// TODO [!] macro_rules for key and map syntactic sugar
+// TODO [x] macro_rules for key and map syntactic sugar
 // TODO [x] Index and IndexMut syntactic sugar
 // TODO choose map/table implementation with a derive attribute
 // TODO? tight couple EnumMap and EnumMapValue if possible
