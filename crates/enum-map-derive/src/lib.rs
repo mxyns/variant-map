@@ -2,7 +2,7 @@ use darling::{FromDeriveInput, FromVariant};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, DataEnum, DeriveInput, Ident, Variant};
+use syn::{parse_macro_input, DataEnum, DeriveInput, Ident, Variant, Generics};
 
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
@@ -89,8 +89,8 @@ impl MapAttr {
 // TODO [x] macro_rules for key and map syntactic sugar
 // TODO [x] Index and IndexMut syntactic sugar
 // TODO [x] choose map/table implementation with a derive attribute
-// TODO [1/2] cleanup -derive code and split into functions
-// TODO handle generics
+// TODO [2/3] cleanup -derive code, split into functions, into different files
+// TODO [1/2] handle generics + bounds
 // TODO add struct and array versions of the "map"
 // TODO? tight couple Map and MapValue if possible
 // TODO doc
@@ -135,10 +135,12 @@ fn generate_key_enum(
 
 fn generate_impl_map_value(
     _map_type: &MapType,
-    enum_name: &Ident,
+    enum_type: (&Generics, &Ident),
     enum_data: &DataEnum,
     key_enum_name: &Ident,
 ) -> proc_macro2::TokenStream {
+    let (generics, enum_name) = enum_type;
+
     let match_case = enum_data.variants.iter().map(|variant| {
         let key_name = KeyNameAttr::from_variant(variant)
             .expect("Wrong key_name options")
@@ -167,7 +169,7 @@ fn generate_impl_map_value(
     });
 
     quote! {
-        impl MapValue for #enum_name {
+        impl #generics MapValue for #enum_name #generics {
             type Key = #key_enum_name;
             type Map = Map<Self::Key, Self>;
 
@@ -178,7 +180,7 @@ fn generate_impl_map_value(
             }
 
 
-            fn make_map() -> <#enum_name as MapValue>::Map {
+            fn make_map() -> Self::Map {
                Self::Map::default()
             }
         }
@@ -219,7 +221,7 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
             let key_enum_quote = generate_key_enum(&map_type, enum_data, &key_enum_name);
 
             let impl_map_value_for_enum_quote =
-                generate_impl_map_value(&map_type, enum_name, enum_data, &key_enum_name);
+                generate_impl_map_value(&map_type, (&ast.generics, enum_name), enum_data, &key_enum_name);
 
             let impl_hash_key_for_enum_key_quote =
                 generate_impl_key_trait_for_key_enum(&map_type, &key_enum_name);
