@@ -90,7 +90,7 @@ impl MapAttr {
 // TODO [x] Index and IndexMut syntactic sugar
 // TODO [x] choose map/table implementation with a derive attribute
 // TODO [2/3] cleanup -derive code, split into functions, into different files
-// TODO [1/2] handle generics + bounds
+// TODO [2/2] handle generics + bounds
 // TODO add struct and array versions of the "map"
 // TODO? tight couple Map and MapValue if possible
 // TODO doc
@@ -168,8 +168,9 @@ fn generate_impl_map_value(
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
-        impl #generics MapValue for #enum_name #generics {
+        impl #impl_generics MapValue for #enum_name #ty_generics #where_clause {
             type Key = #key_enum_name;
             type Map = Map<Self::Key, Self>;
 

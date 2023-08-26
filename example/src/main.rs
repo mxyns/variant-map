@@ -31,9 +31,11 @@ fn normal_enum() {
 
 fn generic_enum() {
 
+    trait UselessTrait {}
+    trait VeryUselessTrait {}
     #[derive(Serialize, Deserialize, EnumMap)]
     #[EnumMap(name = "TestKeys", map = "BTreeMap")]
-    enum GenericEnum<T> {
+    enum GenericEnum<T: VeryUselessTrait> where T: UselessTrait {
         A,
         B,
         C(i32),
@@ -43,6 +45,9 @@ fn generic_enum() {
     }
 
     struct G {}
+
+    impl UselessTrait for G {}
+    impl VeryUselessTrait for G {}
 
     let mut map: as_map!(GenericEnum<G>) = GenericEnum::make_map();
     map.insert(GenericEnum::A);
