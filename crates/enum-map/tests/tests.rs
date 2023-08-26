@@ -1,10 +1,10 @@
 use crate::user::{MyEnum, MyEnumKey};
+use enum_map::common::MapValue;
 use enum_map::hashmap::{EnumMapValue, Map};
 use serde_json::{Map as SerdeMap, Value};
-use enum_map::common::MapValue;
 
 mod user {
-    use enum_map::hashmap::{Map, EnumMapValue, HashKey};
+    use enum_map::hashmap::{EnumMapValue, HashKey, Map};
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;

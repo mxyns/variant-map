@@ -9,24 +9,24 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use crate::common::MapValue;
 
-pub trait HashKey: Ord + Eq + Hash {}
+pub trait OrdHashKey: Ord + Eq + Hash {}
 
 #[derive(Debug)]
 pub struct Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     inner: BTreeMap<Key, Value>,
 }
 
 impl<K, V> Map<K, V>
-    where
-        K: HashKey,
+where
+    K: OrdHashKey,
 {
     pub fn insert(&mut self, value: V) -> Option<V>
-        where
-            K: HashKey,
-            V: MapValue<Key=K>,
+    where
+        K: OrdHashKey,
+        V: MapValue<Key = K>,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
@@ -34,8 +34,8 @@ impl<K, V> Map<K, V>
 }
 
 impl<Key, Value> From<BTreeMap<Key, Value>> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     fn from(value: BTreeMap<Key, Value>) -> Self {
         Map::new(value)
@@ -43,8 +43,8 @@ impl<Key, Value> From<BTreeMap<Key, Value>> for Map<Key, Value>
 }
 
 impl<Key, Value> Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     pub fn new(map: BTreeMap<Key, Value>) -> Self {
         Map { inner: map }
@@ -52,8 +52,8 @@ impl<Key, Value> Map<Key, Value>
 }
 
 impl<Key, Value> Default for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     fn default() -> Self {
         Map {
@@ -63,13 +63,13 @@ impl<Key, Value> Default for Map<Key, Value>
 }
 
 impl<Key, Value> Serialize for Map<Key, Value>
-    where
-        Key: HashKey,
-        Value: Serialize,
+where
+    Key: OrdHashKey,
+    Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_seq(Some(self.len()))?;
 
@@ -82,16 +82,16 @@ impl<Key, Value> Serialize for Map<Key, Value>
 }
 
 struct EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     marker: PhantomData<fn() -> Map<Key, Value>>,
 }
 
 impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
-        Value: MapValue<Key=Key> + DeserializeOwned,
+where
+    Key: OrdHashKey,
+    Value: MapValue<Key = Key> + DeserializeOwned,
 {
     type Value = Map<Key, Value>;
 
@@ -100,8 +100,8 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
+    where
+        A: SeqAccess<'de>,
     {
         let mut map: BTreeMap<Key, Value> = BTreeMap::<Key, Value>::new();
 
@@ -115,13 +115,13 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
 }
 
 impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
-    where
-        Key: HashKey,
-        Value: MapValue<Key=Key> + DeserializeOwned,
+where
+    Key: OrdHashKey,
+    Value: MapValue<Key = Key> + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let visitor = EnumMapVisitor::<Key, Value> {
             marker: PhantomData,
@@ -131,8 +131,8 @@ impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
 }
 
 impl<Key, Value> Deref for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     type Target = BTreeMap<Key, Value>;
 
@@ -142,8 +142,8 @@ impl<Key, Value> Deref for Map<Key, Value>
 }
 
 impl<Key, Value> DerefMut for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -151,8 +151,8 @@ impl<Key, Value> DerefMut for Map<Key, Value>
 }
 
 impl<Key, Value> Index<Key> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     type Output = Value;
 
@@ -162,8 +162,8 @@ impl<Key, Value> Index<Key> for Map<Key, Value>
 }
 
 impl<Key, Value> IndexMut<Key> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: OrdHashKey,
 {
     fn index_mut(&mut self, index: Key) -> &mut Self::Output {
         self.inner.get_mut(&index).unwrap()

@@ -9,11 +9,10 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use crate::common::MapValue;
 
-
 #[derive(Debug)]
 pub struct Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     inner: HashMap<Key, Value>,
 }
@@ -21,13 +20,13 @@ pub struct Map<Key, Value>
 pub trait HashKey: Eq + Hash {}
 
 impl<K, V> Map<K, V>
-    where
-        K: HashKey,
+where
+    K: HashKey,
 {
     pub fn insert(&mut self, value: V) -> Option<V>
-        where
-            K: HashKey,
-            V: MapValue<Key=K>,
+    where
+        K: HashKey,
+        V: MapValue<Key = K>,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
@@ -35,8 +34,8 @@ impl<K, V> Map<K, V>
 }
 
 impl<Key, Value> From<HashMap<Key, Value>> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn from(value: HashMap<Key, Value>) -> Self {
         Map::new(value)
@@ -44,8 +43,8 @@ impl<Key, Value> From<HashMap<Key, Value>> for Map<Key, Value>
 }
 
 impl<Key, Value> Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     pub fn new(map: HashMap<Key, Value>) -> Self {
         Map { inner: map }
@@ -53,8 +52,8 @@ impl<Key, Value> Map<Key, Value>
 }
 
 impl<Key, Value> Default for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn default() -> Self {
         Map {
@@ -64,13 +63,13 @@ impl<Key, Value> Default for Map<Key, Value>
 }
 
 impl<Key, Value> Serialize for Map<Key, Value>
-    where
-        Key: HashKey,
-        Value: Serialize,
+where
+    Key: HashKey,
+    Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_seq(Some(self.len()))?;
 
@@ -83,16 +82,16 @@ impl<Key, Value> Serialize for Map<Key, Value>
 }
 
 struct EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     marker: PhantomData<fn() -> Map<Key, Value>>,
 }
 
 impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
-    where
-        Key: HashKey,
-        Value: MapValue<Key=Key> + DeserializeOwned,
+where
+    Key: HashKey,
+    Value: MapValue<Key = Key> + DeserializeOwned,
 {
     type Value = Map<Key, Value>;
 
@@ -101,8 +100,8 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
+    where
+        A: SeqAccess<'de>,
     {
         let map_size = seq.size_hint().unwrap_or(0);
         let mut map: HashMap<Key, Value> = HashMap::<Key, Value>::with_capacity(map_size);
@@ -117,13 +116,13 @@ impl<'de, Key, Value> Visitor<'de> for EnumMapVisitor<Key, Value>
 }
 
 impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
-    where
-        Key: HashKey,
-        Value: MapValue<Key=Key> + DeserializeOwned,
+where
+    Key: HashKey,
+    Value: MapValue<Key = Key> + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let visitor = EnumMapVisitor::<Key, Value> {
             marker: PhantomData,
@@ -133,8 +132,8 @@ impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
 }
 
 impl<Key, Value> Deref for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     type Target = HashMap<Key, Value>;
 
@@ -144,8 +143,8 @@ impl<Key, Value> Deref for Map<Key, Value>
 }
 
 impl<Key, Value> DerefMut for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -153,8 +152,8 @@ impl<Key, Value> DerefMut for Map<Key, Value>
 }
 
 impl<Key, Value> Index<Key> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     type Output = Value;
 
@@ -164,8 +163,8 @@ impl<Key, Value> Index<Key> for Map<Key, Value>
 }
 
 impl<Key, Value> IndexMut<Key> for Map<Key, Value>
-    where
-        Key: HashKey,
+where
+    Key: HashKey,
 {
     fn index_mut(&mut self, index: Key) -> &mut Self::Output {
         self.inner.get_mut(&index).unwrap()

@@ -1,10 +1,10 @@
+use enum_map::common::MapValue;
 use enum_map::derive::EnumMap;
 use enum_map::{as_key, as_map};
-use enum_map::common::{MapValue};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, EnumMap)]
-#[EnumMap(name="TestKeys", map="BTreeMap")]
+#[EnumMap(name = "TestKeys", map = "BTreeMap")]
 enum TestEnum {
     A,
     B,
