@@ -10,5 +10,5 @@ fn maps_tests() {
 
 #[test]
 fn struct_tests() {
-
+    struct_tests::insert_get_map();
 }

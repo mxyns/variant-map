@@ -4,7 +4,6 @@ use enum_map::{as_key, as_map};
 use serde::{Deserialize, Serialize};
 
 fn normal_enum() {
-
     #[derive(Serialize, Deserialize, EnumMap)]
     #[EnumMap(name = "TestKeys", map = "BTreeMap")]
     enum TestEnum {
@@ -30,12 +29,14 @@ fn normal_enum() {
 }
 
 fn generic_enum() {
-
     trait UselessTrait {}
     trait VeryUselessTrait {}
     #[derive(Serialize, Deserialize, EnumMap)]
     #[EnumMap(name = "TestKeys", map = "BTreeMap")]
-    enum GenericEnum<T: VeryUselessTrait> where T: UselessTrait {
+    enum GenericEnum<T: VeryUselessTrait>
+    where
+        T: UselessTrait,
+    {
         A,
         B,
         C(i32),

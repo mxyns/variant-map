@@ -2,7 +2,7 @@ use darling::{FromDeriveInput, FromVariant};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, DataEnum, DeriveInput, Ident, Variant, Generics};
+use syn::{parse_macro_input, DataEnum, DeriveInput, Generics, Ident, Variant};
 
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
@@ -221,8 +221,12 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
         syn::Data::Enum(ref mut enum_data) => {
             let key_enum_quote = generate_key_enum(&map_type, enum_data, &key_enum_name);
 
-            let impl_map_value_for_enum_quote =
-                generate_impl_map_value(&map_type, (&ast.generics, enum_name), enum_data, &key_enum_name);
+            let impl_map_value_for_enum_quote = generate_impl_map_value(
+                &map_type,
+                (&ast.generics, enum_name),
+                enum_data,
+                &key_enum_name,
+            );
 
             let impl_hash_key_for_enum_key_quote =
                 generate_impl_key_trait_for_key_enum(&map_type, &key_enum_name);
