@@ -45,15 +45,9 @@ impl TryFrom<&String> for MapType {
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
         match value.to_lowercase().as_str() {
-            "hashmap" => {
-                Ok(Self::HashMap)
-            }
-            "btreemap" => {
-                Ok(Self::BTreeMap)
-            }
-            _ => {
-                Err("Invalid 'map' argument, available {{ \"hashmap\", \"btreemap\" }}".into())
-            }
+            "hashmap" => Ok(Self::HashMap),
+            "btreemap" => Ok(Self::BTreeMap),
+            _ => Err("Invalid 'map' argument, available {{ \"hashmap\", \"btreemap\" }}".into()),
         }
     }
 }
@@ -61,8 +55,12 @@ impl TryFrom<&String> for MapType {
 impl ToTokens for MapType {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let token = match self {
-            MapType::HashMap => { quote!(hashmap) }
-            MapType::BTreeMap => { quote!(btreemap) }
+            MapType::HashMap => {
+                quote!(hashmap)
+            }
+            MapType::BTreeMap => {
+                quote!(btreemap)
+            }
         };
 
         token.to_tokens(tokens);
@@ -92,12 +90,17 @@ impl MapAttr {
 // TODO [x] Index and IndexMut syntactic sugar
 // TODO [x] choose map/table implementation with a derive attribute
 // TODO [1/2] cleanup -derive code and split into functions
-// TODO add struct version of the map
-// TODO? tight couple EnumMap and EnumMapValue if possible
+// TODO handle generics
+// TODO add struct and array versions of the "map"
+// TODO? tight couple Map and MapValue if possible
 // TODO doc
 // TODO publish
 
-fn generate_key_enum(map_type: &MapType, enum_data: &DataEnum, key_enum_name: &Ident) -> proc_macro2::TokenStream {
+fn generate_key_enum(
+    map_type: &MapType,
+    enum_data: &DataEnum,
+    key_enum_name: &Ident,
+) -> proc_macro2::TokenStream {
     let key_variants = enum_data.variants.iter().map(|variant| {
         let key_name_attr = KeyNameAttr::from_variant(variant).expect("Wrong key_name options");
 
@@ -114,8 +117,12 @@ fn generate_key_enum(map_type: &MapType, enum_data: &DataEnum, key_enum_name: &I
     });
 
     let derives_quote = match map_type {
-        MapType::HashMap => { quote!{ #[derive(Debug, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize)] }}
-        MapType::BTreeMap => { quote!{ #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde::Serialize, ::serde::Deserialize)] }}
+        MapType::HashMap => {
+            quote! { #[derive(Debug, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize)] }
+        }
+        MapType::BTreeMap => {
+            quote! { #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde::Serialize, ::serde::Deserialize)] }
+        }
     };
 
     quote! {
@@ -149,10 +156,10 @@ fn generate_impl_map_value(
         } else {
             None
         }
-            .map(|fields| {
-                let skip_fields = fields.iter().map(|_| quote!(_));
-                Some(quote! { (#(#skip_fields),*) })
-            });
+        .map(|fields| {
+            let skip_fields = fields.iter().map(|_| quote!(_));
+            Some(quote! { (#(#skip_fields),*) })
+        });
 
         quote! {
             #enum_name::#ident #skip_fields => #key_enum_name::#key_name
@@ -178,10 +185,17 @@ fn generate_impl_map_value(
     }
 }
 
-fn generate_impl_key_trait_for_key_enum(map_type: &MapType, key_enum_name: &Ident) -> proc_macro2::TokenStream {
+fn generate_impl_key_trait_for_key_enum(
+    map_type: &MapType,
+    key_enum_name: &Ident,
+) -> proc_macro2::TokenStream {
     match map_type {
-        MapType::HashMap => { quote! {impl HashKey for #key_enum_name {}} }
-        MapType::BTreeMap => { quote! {impl OrdHashKey for #key_enum_name {}} }
+        MapType::HashMap => {
+            quote! {impl HashKey for #key_enum_name {}}
+        }
+        MapType::BTreeMap => {
+            quote! {impl OrdHashKey for #key_enum_name {}}
+        }
     }
 }
 
@@ -204,7 +218,7 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
         syn::Data::Enum(ref mut enum_data) => {
             let key_enum_quote = generate_key_enum(&map_type, enum_data, &key_enum_name);
 
-            let impl_enum_map_value_for_enum_quote =
+            let impl_map_value_for_enum_quote =
                 generate_impl_map_value(&map_type, enum_name, enum_data, &key_enum_name);
 
             let impl_hash_key_for_enum_key_quote =
@@ -224,7 +238,7 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
                     #key_enum_quote
 
                     #[automatically_derived]
-                    #impl_enum_map_value_for_enum_quote
+                    #impl_map_value_for_enum_quote
 
                     #[automatically_derived]
                     #impl_hash_key_for_enum_key_quote
