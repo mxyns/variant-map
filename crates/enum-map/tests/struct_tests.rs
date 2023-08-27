@@ -1,6 +1,9 @@
-use crate::user::{MyEnum, MyEnumKey};
+use serde_json::{Map as SerdeMap, Value};
+use user::{MyEnum, MyEnumKey};
 use enum_map::common::MapValue;
 
+
+#[allow(non_snake_case, dead_code)]
 mod user {
     use enum_map::common::MapValue;
     use serde::de::{SeqAccess, Visitor};
@@ -44,13 +47,13 @@ mod user {
             if let Some(ref A) = self.A {
                 seq.serialize_element(A)?
             }
-            if let Some(ref B) = self.A {
+            if let Some(ref B) = self.B {
                 seq.serialize_element(B)?
             }
-            if let Some(ref C) = self.A {
+            if let Some(ref C) = self.C {
                 seq.serialize_element(C)?
             }
-            if let Some(ref D) = self.A {
+            if let Some(ref D) = self.D {
                 seq.serialize_element(D)?
             }
 
@@ -176,6 +179,22 @@ mod user {
     }
 }
 
+
+#[test]
+pub fn ensure_correct_key() {
+    let value = MyEnum::A;
+    let key = value.to_key();
+
+    assert_eq!(key, MyEnumKey::A);
+    assert_ne!(key, MyEnumKey::B);
+
+    let value = MyEnum::B(10);
+    let key = value.to_key();
+
+    assert_eq!(key, MyEnumKey::B);
+    assert_ne!(key, MyEnumKey::A);
+}
+
 #[test]
 pub fn insert_get_map() {
     let mut m = MyEnum::make_map();
@@ -197,5 +216,63 @@ pub fn insert_get_map() {
     {
         let variant_b = m.remove(&<MyEnum as MapValue>::Key::B).unwrap();
         assert_eq!(variant_b, MyEnum::B(10))
+    }
+}
+
+#[test]
+pub fn serialize() {
+    let mut m = MyEnum::make_map();
+
+    m.insert(MyEnum::A);
+    m.insert(MyEnum::B(0));
+    m.insert(MyEnum::C);
+    m.insert(MyEnum::D(20));
+    {
+        println!("{:#?}", &m);
+        let m_str = serde_json::to_string(&m).unwrap();
+        println!("result= {:#?}", m_str);
+        let expect = "[{\"D\":20},\"A\",{\"B\":0},\"C\"]";
+        println!("expect~ {:#?}", expect)
+    }
+
+    m.insert(MyEnum::B(69));
+    {
+        println!("{:#?}", &m);
+        let m_str = serde_json::to_string(&m).unwrap();
+        println!("result= {:#?}", m_str);
+        let expect = "[{\"D\":20},\"A\",{\"B\":69},\"C\"]";
+        println!("expect~ {:#?}", expect)
+    }
+
+    let value = {
+        let value = serde_json::to_value(&m).unwrap();
+        let expect = Value::Array(vec![
+            Value::Object({
+                let mut d = SerdeMap::new();
+                d.insert("D".to_string(), Value::Number(20.into()));
+                d
+            }),
+            Value::String("A".to_string()),
+            Value::Object({
+                let mut b = SerdeMap::new();
+                b.insert("B".to_string(), Value::Number(69.into()));
+                b
+            }),
+            Value::String("C".to_string()),
+        ]);
+
+        println!("result= {:#?}", value);
+        println!("expect~ {:#?}", expect);
+        value
+    };
+
+    {
+        let m2: <MyEnum as MapValue>::Map = serde_json::from_value(value).unwrap();
+
+        let m_str = serde_json::to_string(&m).unwrap();
+        let m2_str = serde_json::to_string(&m2).unwrap();
+
+        println!("result= {:#?}", m_str);
+        println!("expect~ {:#?}", m2_str);
     }
 }

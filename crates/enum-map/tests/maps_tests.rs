@@ -110,7 +110,7 @@ pub fn serialize() {
     {
         println!("{:#?}", &m);
         let m_str = serde_json::to_string(&m).unwrap();
-        println!("{:#?}", m_str);
+        println!("result= {:#?}", m_str);
         let expect = "[{\"D\":20},\"A\",{\"B\":69},\"C\"]";
         println!("expect~ {:#?}", expect)
     }
