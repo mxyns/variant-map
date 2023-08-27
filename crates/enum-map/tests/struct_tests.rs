@@ -5,15 +5,16 @@ use user::{MyEnum, MyEnumKey};
 #[allow(non_snake_case, dead_code)]
 mod user {
     use enum_map::common::MapValue;
-    use serde::de::{SeqAccess, Visitor};
+    use serde::de::{Visitor};
     use serde::ser::SerializeSeq;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use std::fmt::{Debug, Formatter};
+    use std::marker::PhantomData;
     use std::mem;
     use std::ops::{Index, IndexMut};
 
     #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub enum MyEnum<T> {
+    pub enum MyEnum<T>{
         A,
         B(i32),
         C,
@@ -28,15 +29,26 @@ mod user {
         D,
     }
 
-    #[derive(Debug, Default)]
-    pub struct MyStruct<T> {
+    #[derive(Debug)]
+    pub struct MyStruct<T>{
         A: Option<MyEnum<T>>,
         B: Option<MyEnum<T>>,
         C: Option<MyEnum<T>>,
         D: Option<MyEnum<T>>,
     }
 
-    impl Serialize for MyStruct {
+    impl<T> Default for MyStruct<T> {
+        fn default() -> Self {
+            Self {
+                A: None,
+                B: None,
+                C: None,
+                D: None,
+            }
+        }
+    }
+
+    impl<T> Serialize for MyStruct<T> where T: Serialize, MyEnum<T>: Serialize {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
@@ -60,22 +72,23 @@ mod user {
         }
     }
 
-    struct MyStructVisitor;
+    struct MyStructVisitor<T>(PhantomData<(T)>);
 
-    impl<'de> Visitor<'de> for MyStructVisitor {
-        type Value = MyStruct;
+    impl<'de, T> Visitor<'de> for MyStructVisitor<T>
+    where T: Deserialize<'de> {
+        type Value = MyStruct<T>;
 
         fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
             formatter.write_str("MyStructVisitor expects a MyStruct holding MyEnum variants")
         }
 
         fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
+            where
+                A: serde::de::SeqAccess<'de>,
         {
             let mut result = MyStruct::default();
 
-            while let Some(elem) = seq.next_element::<Option<MyEnum>>()? {
+            while let Some(elem) = seq.next_element::<Option<MyEnum<T>>>()? {
                 match elem {
                     Some(MyEnum::A) => result.A = elem,
                     Some(MyEnum::B(_)) => result.B = elem,
@@ -88,17 +101,17 @@ mod user {
             Ok(result)
         }
     }
-    impl<'de> Deserialize<'de> for MyStruct {
+    impl<'de, T> Deserialize<'de> for MyStruct<T> where T: Deserialize<'de> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_seq(MyStructVisitor {})
+            deserializer.deserialize_seq(MyStructVisitor(PhantomData::default()))
         }
     }
 
-    impl MyStruct {
-        pub fn remove(&mut self, key: &MyEnumKey) -> Option<MyEnum> {
+    impl<T> MyStruct<T> {
+        pub fn remove(&mut self, key: &MyEnumKey) -> Option<MyEnum<T>> {
             match key {
                 MyEnumKey::A => mem::take(&mut self.A),
                 MyEnumKey::B => mem::take(&mut self.B),
@@ -107,7 +120,7 @@ mod user {
             }
         }
 
-        pub fn insert(&mut self, value: MyEnum) -> Option<MyEnum> {
+        pub fn insert(&mut self, value: MyEnum<T>) -> Option<MyEnum<T>> {
             match value {
                 MyEnum::A => mem::replace(&mut self.A, Some(value)),
                 MyEnum::B(_) => mem::replace(&mut self.B, Some(value)),
@@ -116,7 +129,7 @@ mod user {
             }
         }
 
-        pub fn get(&self, key: &MyEnumKey) -> &Option<MyEnum> {
+        pub fn get(&self, key: &MyEnumKey) -> &Option<MyEnum<T>> {
             match key {
                 MyEnumKey::A => &self.A,
                 MyEnumKey::B => &self.B,
@@ -125,7 +138,7 @@ mod user {
             }
         }
 
-        pub fn get_mut(&mut self, key: &MyEnumKey) -> &mut Option<MyEnum> {
+        pub fn get_mut(&mut self, key: &MyEnumKey) -> &mut Option<MyEnum<T>> {
             match key {
                 MyEnumKey::A => &mut self.A,
                 MyEnumKey::B => &mut self.B,
@@ -135,8 +148,8 @@ mod user {
         }
     }
 
-    impl Index<MyEnumKey> for MyStruct {
-        type Output = Option<MyEnum>;
+    impl<T> Index<MyEnumKey> for MyStruct<T> {
+        type Output = Option<MyEnum<T>>;
 
         fn index(&self, key: MyEnumKey) -> &Self::Output {
             match key {
@@ -148,7 +161,7 @@ mod user {
         }
     }
 
-    impl IndexMut<MyEnumKey> for MyStruct {
+    impl<T> IndexMut<MyEnumKey> for MyStruct<T> {
         fn index_mut(&mut self, key: MyEnumKey) -> &mut Self::Output {
             match key {
                 MyEnumKey::A => &mut self.A,
@@ -159,9 +172,9 @@ mod user {
         }
     }
 
-    impl MapValue for MyEnum {
+    impl<T> MapValue for MyEnum<T> {
         type Key = MyEnumKey;
-        type Map = MyStruct;
+        type Map = MyStruct<T>;
 
         fn to_key(&self) -> Self::Key {
             match self {
@@ -180,13 +193,13 @@ mod user {
 
 #[test]
 pub fn ensure_correct_key() {
-    let value = MyEnum::A;
+    let value: MyEnum<i64> = MyEnum::A;
     let key = value.to_key();
 
     assert_eq!(key, MyEnumKey::A);
     assert_ne!(key, MyEnumKey::B);
 
-    let value = MyEnum::B(10);
+    let value: MyEnum<i64> = MyEnum::B(10);
     let key = value.to_key();
 
     assert_eq!(key, MyEnumKey::B);
@@ -195,7 +208,7 @@ pub fn ensure_correct_key() {
 
 #[test]
 pub fn insert_get_map() {
-    let mut m = MyEnum::make_map();
+    let mut m = MyEnum::<i64>::make_map();
 
     m.insert(MyEnum::A);
     m.insert(MyEnum::B(0));
@@ -206,20 +219,20 @@ pub fn insert_get_map() {
         assert_eq!(variant_a, MyEnum::A);
     }
     {
-        let variant_b = m.remove(&<MyEnum as MapValue>::Key::B).unwrap();
+        let variant_b = m.remove(&<MyEnum<i64> as MapValue>::Key::B).unwrap();
         assert_eq!(variant_b, MyEnum::B(0))
     }
     m.insert(MyEnum::B(0));
     m.insert(MyEnum::B(10));
     {
-        let variant_b = m.remove(&<MyEnum as MapValue>::Key::B).unwrap();
+        let variant_b = m.remove(&<MyEnum<i64> as MapValue>::Key::B).unwrap();
         assert_eq!(variant_b, MyEnum::B(10))
     }
 }
 
 #[test]
 pub fn serialize() {
-    let mut m = MyEnum::make_map();
+    let mut m = MyEnum::<i64>::make_map();
 
     m.insert(MyEnum::A);
     m.insert(MyEnum::B(0));
@@ -265,7 +278,7 @@ pub fn serialize() {
     };
 
     {
-        let m2: <MyEnum as MapValue>::Map = serde_json::from_value(value).unwrap();
+        let m2: <MyEnum<i64> as MapValue>::Map = serde_json::from_value(value).unwrap();
 
         let m_str = serde_json::to_string(&m).unwrap();
         let m2_str = serde_json::to_string(&m2).unwrap();

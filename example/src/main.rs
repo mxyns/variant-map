@@ -26,6 +26,8 @@ fn normal_enum() {
     let _d = map.get(&<TestEnum as MapValue>::Key::Dimitri);
     let _b = &map[<TestEnum as MapValue>::Key::B];
     let _b = &mut map[<TestEnum as MapValue>::Key::B];
+
+    println!("{}", serde_json::to_string(&map).unwrap());
 }
 
 fn generic_enum() {
@@ -45,6 +47,7 @@ fn generic_enum() {
         D(i32, T, (u16, String)),
     }
 
+    #[derive(Serialize, Deserialize)]
     struct G {}
 
     impl UselessTrait for G {}
@@ -61,6 +64,8 @@ fn generic_enum() {
     let _d = map.get(&<GenericEnum<G> as MapValue>::Key::Dimitri);
     let _b = &map[<GenericEnum<G> as MapValue>::Key::B];
     let _b = &mut map[<GenericEnum<G> as MapValue>::Key::B];
+
+    println!("{}", serde_json::to_string(&map).unwrap());
 }
 
 fn normal_enum_struct_map() {
@@ -74,7 +79,6 @@ fn normal_enum_struct_map() {
         #[serde(rename = "dimitri")]
         D(i32, u64, (u16, String)),
     }
-    /*
     let mut map: as_map!(TestEnum) = TestEnum::make_map();
     map.insert(TestEnum::A);
     map.insert(TestEnum::B);
@@ -86,7 +90,8 @@ fn normal_enum_struct_map() {
     let _d = map.get(&<TestEnum as MapValue>::Key::Dimitri);
     let _b = &map[<TestEnum as MapValue>::Key::B];
     let _b = &mut map[<TestEnum as MapValue>::Key::B];
-    */
+
+    println!("{}", serde_json::to_string(&map).unwrap());
 }
 
 fn generic_enum_struct_map() {
@@ -105,19 +110,19 @@ fn generic_enum_struct_map() {
     impl<T> UselessTrait for T {}
     impl<T> SuperUselessTrait for T {}
 
-    /*
-    let mut map: as_map!(TestEnum) = TestEnum::make_map();
+    let mut map: as_map!(TestEnum<i64>) = TestEnum::<i64>::make_map();
     map.insert(TestEnum::A);
     map.insert(TestEnum::B);
     map.insert(TestEnum::C(0));
     map.insert(TestEnum::D(0, 1, (2, "mdr".to_string())));
-    let _k = <as_key!(TestEnum)>::A;
-    let _k = as_key!(TestEnum, A);
-    let _a = map.get(&<TestEnum as MapValue>::Key::A);
-    let _d = map.get(&<TestEnum as MapValue>::Key::Dimitri);
-    let _b = &map[<TestEnum as MapValue>::Key::B];
-    let _b = &mut map[<TestEnum as MapValue>::Key::B];
-    */
+    let _k = <as_key!(TestEnum<i64>)>::A;
+    let _k = as_key!(TestEnum<i64>, A);
+    let _a = map.get(&<TestEnum<i64> as MapValue>::Key::A);
+    let _d = map.get(&<TestEnum<i64> as MapValue>::Key::Dimitri);
+    let _b = &map[<TestEnum<i64> as MapValue>::Key::B];
+    let _b = &mut map[<TestEnum<i64> as MapValue>::Key::B];
+
+    println!("{}", serde_json::to_string(&map).unwrap());
 }
 
 fn main() {

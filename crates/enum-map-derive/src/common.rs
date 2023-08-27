@@ -2,7 +2,8 @@ use crate::attrs::{KeyNameAttr, MapType};
 use darling::FromVariant;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DataEnum, Generics, Ident, Variant};
+use syn::{DataEnum, Generics, Ident, Variant, WhereClause, WherePredicate};
+use syn::TypeParamBound::Verbatim;
 
 pub struct EnumType<'a> {
     pub(crate) generics: &'a Generics,
@@ -85,6 +86,17 @@ where
     });
 
     quote! {
-        #(#match_cases),*
+        #(#match_cases)*
     }
+}
+
+pub(crate) fn where_clause_add_trait(where_clause: &WhereClause, the_trait: TokenStream) -> WhereClause {
+    let mut cloned = where_clause.clone();
+    for predicate in cloned.predicates.iter_mut() {
+        if let WherePredicate::Type(value) = predicate {
+            value.bounds.push(Verbatim(quote!(#the_trait)));
+        }
+    }
+
+    cloned
 }

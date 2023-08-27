@@ -19,12 +19,14 @@ use syn::{parse_macro_input, DeriveInput};
 // TODO [2/2] handle generics + bounds
 // TODO [1/2] add struct and array versions of the "map"
     // TODO [x] handle generics on struct
-    // TODO (de)serialize derive on struct
+    // TODO [x] (de)serialize derive on struct
+// TODO add (de)serialize impl only if some attribute is set
 // TODO custom visibility on keys, struct, impls, etc.
 // TODO trait for all maps
 // TODO? tight couple Map and MapValue if possible
 // TODO doc
 // TODO publish
+// TODO allow using user generated (possibly generic or tuple variant) keys
 
 #[proc_macro_derive(EnumMap, attributes(EnumMap, key_name))]
 pub fn derive_enum_map(input: TokenStream) -> TokenStream {

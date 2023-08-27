@@ -67,7 +67,7 @@ pub(crate) fn generate_impl_map_value(
         key_enum_name,
         |enum_name, variant_name, skip_fields, key_enum_name, key_name| {
             quote! {
-                #enum_name::#variant_name #skip_fields => #key_enum_name::#key_name
+                #enum_name::#variant_name #skip_fields => #key_enum_name::#key_name,
             }
         },
     );
@@ -83,7 +83,6 @@ pub(crate) fn generate_impl_map_value(
                    #match_body
                 }
             }
-
 
             fn make_map() -> Self::Map {
                Self::Map::default()

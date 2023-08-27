@@ -4,7 +4,7 @@ use crate::common::EnumType;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
-use syn::{Data, DataEnum, DeriveInput};
+use syn::{Data, DataEnum, DeriveInput, GenericParam, Lifetime, LifetimeParam, TypeGenerics, WhereClause};
 
 pub(crate) fn generate_struct_code(
     ast: &DeriveInput,
@@ -33,6 +33,10 @@ pub(crate) fn generate_struct_code(
             let impl_enum_map_value =
                 generate_impl_map_value(struct_name, enum_type, enum_data, key_enum_name);
 
+            let impl_serialize = generate_impl_serialize(struct_name, enum_type, enum_data, key_enum_name);
+
+            let impl_deserialize = generate_impl_deserialize(struct_name, enum_type, enum_data, key_enum_name);
+
             quote! {
                 #[automatically_derived]
                 #key_enum_quote
@@ -47,9 +51,152 @@ pub(crate) fn generate_struct_code(
 
                 #[automatically_derived]
                 #impl_enum_map_value
+
+                #[automatically_derived]
+                #impl_serialize
+
+                #[automatically_derived]
+                #impl_deserialize
             }
         }
         _ => syn::Error::new(ast.span(), "EnumMap works only on enums").into_compile_error(),
+    }
+}
+
+fn add_where_clause_enum_bound(where_clause: Option<&WhereClause>, enum_name: &Ident, type_generics: &TypeGenerics, bound: TokenStream) -> TokenStream {
+    let new_enum_bound = quote! { #enum_name #type_generics: #bound };
+    let where_clause = where_clause.map(|where_clause| {
+        let where_clause = common::where_clause_add_trait(where_clause, bound);
+        quote! {
+        #where_clause, #new_enum_bound
+    }
+    }).unwrap_or_else(|| {
+        quote! { where #new_enum_bound }
+    });
+
+    where_clause
+}
+
+fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
+    let EnumType {
+        enum_name,
+        generics
+    } = enum_type;
+
+    let serialize_fields = common::enum_entries_map_to(enum_name, enum_data, key_enum_name, |_enum_name, _variant_name, _skip_fields, _key_enum_name, key_name| {
+        quote! {
+            if let Some(ref value) = self.#key_name { seq.serialize_element(value)? }
+        }
+    });
+    let fields_len = enum_data.variants.len();
+
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    // Update where clause with Serialize trait
+    let where_clause = add_where_clause_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Serialize));
+
+    quote! {
+        use ::serde::ser::SerializeSeq;
+        impl #impl_generics ::serde::Serialize for #struct_name #type_generics #where_clause {
+            fn serialize<__serde_S>(&self, serializer: __serde_S) -> Result<__serde_S::Ok, __serde_S::Error>
+            where
+                __serde_S: ::serde::Serializer,
+            {
+                let mut seq = serializer.serialize_seq(Some(#fields_len))?;
+
+                #serialize_fields
+
+                seq.end()
+            }
+        }
+    }
+}
+
+fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
+    let EnumType {
+        enum_name,
+        generics
+    } = enum_type;
+
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+    let visitor = format_ident!("__EnumMap__StructMap__{}__", key_enum_name);
+    let phantom = if generics.params.is_empty() { None } else {
+        Some(
+            quote! {
+                (PhantomData #type_generics)
+            }
+        )
+    };
+
+    let visitor_quote = quote! {
+        use core::marker::PhantomData;
+        struct #visitor #type_generics #phantom;
+    };
+
+    let deser_lifetime = quote!('_serde_deserializer_lifetime_de);
+    let mut generics = (*generics).clone();
+    generics.params.push(GenericParam::Lifetime(LifetimeParam::new(Lifetime::new("'_serde_deserializer_lifetime_de", impl_generics.span()))));
+
+    // Update where clause with Deserialize trait
+    let where_clause = add_where_clause_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Deserialize<#deser_lifetime>));
+
+    let (impl_generics, _, _) = generics.split_for_impl();
+
+    let deser_match = common::enum_entries_map_to(enum_name, enum_data, key_enum_name, |enum_name, variant_name, skip_fields, _key_enum_name, key_name| {
+        quote! { Some(#enum_name::#variant_name #skip_fields) => result.#key_name = elem, }
+    });
+
+    let expected_msg = format!("{visitor} expects a {struct_name} holding {enum_name} variants");
+
+    let impl_visitor = quote! {
+        impl #impl_generics ::serde::de::Visitor<#deser_lifetime> for #visitor #type_generics #where_clause {
+            type Value = #struct_name #type_generics;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str(#expected_msg)
+            }
+
+            fn visit_seq<__serde__A>(self, mut seq: __serde__A) -> core::result::Result<Self::Value, __serde__A::Error>
+                where
+                    __serde__A: ::serde::de::SeqAccess<#deser_lifetime>,
+            {
+                let mut result = #struct_name::default();
+
+                while let Some(elem) = seq.next_element::<Option<#enum_name #type_generics>>()? {
+                    match elem {
+                        #deser_match
+                        None => {}
+                    }
+                }
+
+                Ok(result)
+            }
+        }
+    };
+
+    let visitor_init = if phantom.is_some() {
+        quote!{ #visitor (PhantomData::default())}
+    } else {
+        quote!( #visitor {} )
+    };
+
+    let impl_deserialize_struct = quote! {
+        impl #impl_generics Deserialize<#deser_lifetime> for #struct_name #type_generics #where_clause {
+            fn deserialize<__serde_D>(deserializer: __serde_D) -> core::result::Result<Self, __serde_D::Error>
+            where
+                __serde_D: ::serde::de::Deserializer<#deser_lifetime>,
+            {
+                deserializer.deserialize_seq( #visitor_init )
+            }
+        }
+    };
+
+    quote! {
+        #visitor_quote
+
+        #impl_visitor
+
+        #impl_deserialize_struct
     }
 }
 
@@ -67,7 +214,7 @@ fn generate_enum_struct_impl(
         key_enum_name,
         |_enum_name, _variant_name, _skip_fields, key_enum_name, key_name| {
             quote! {
-                #key_enum_name::#key_name => std::mem::take(&mut self.#key_name)
+                #key_enum_name::#key_name => std::mem::take(&mut self.#key_name),
             }
         },
     );
@@ -78,7 +225,7 @@ fn generate_enum_struct_impl(
         key_enum_name,
         |enum_name, variant_name, skip_fields, _key_enum_name, key_name| {
             quote! {
-                #enum_name::#variant_name #skip_fields => std::mem::replace(&mut self.#key_name, Some(value))
+                #enum_name::#variant_name #skip_fields => std::mem::replace(&mut self.#key_name, Some(value)),
             }
         },
     );
@@ -89,7 +236,7 @@ fn generate_enum_struct_impl(
         key_enum_name,
         |_enum_name, _variant_name, _skip_fields, key_enum_name, key_name| {
             quote! {
-                #key_enum_name::#key_name => &self.#key_name
+                #key_enum_name::#key_name => &self.#key_name,
             }
         },
     );
@@ -100,7 +247,7 @@ fn generate_enum_struct_impl(
         key_enum_name,
         |_enum_name, _variant_name, _skip_fields, key_enum_name, key_name| {
             quote! {
-                #key_enum_name::#key_name => &mut self.#key_name
+                #key_enum_name::#key_name => &mut self.#key_name,
             }
         },
     );
@@ -156,12 +303,22 @@ fn generate_enum_struct_code(
         key_enum_name,
         |enum_name, _variant_name, _skip_fields, _key_enum_name, key_name| {
             quote! {
-                #key_name: Option<#enum_name #type_generics>
+                #key_name: Option<#enum_name #type_generics>,
             }
         },
     );
 
-    //FIXME generics
+    let fields_none = common::enum_entries_map_to(
+        enum_name,
+        enum_data,
+        key_enum_name,
+        |_enum_name, _variant_name, _skip_fields, _key_enum_name, key_name| {
+            quote! {
+                #key_name: None,
+            }
+        },
+    );
+
     quote! {
         #[derive(Debug)]
         #[allow(non_snake_case)]
@@ -173,7 +330,7 @@ fn generate_enum_struct_code(
         impl #impl_generics Default for #struct_name #type_generics #where_clause {
             fn default() -> Self {
                 #struct_name {
-                    ..Default::default()
+                    #fields_none
                 }
             }
         }
@@ -197,7 +354,7 @@ fn generate_impl_index(
             key_enum_name,
             |_enum_name, _variant_name, _skip_fields, key_enum_name, key_name| {
                 quote! {
-                    #key_enum_name::#key_name => &self.#key_name
+                    #key_enum_name::#key_name => &self.#key_name,
                 }
             },
         );
@@ -222,7 +379,7 @@ fn generate_impl_index(
             key_enum_name,
             |_enum_name, _variant_name, _skip_fields, key_enum_name, key_name| {
                 quote! {
-                    #key_enum_name::#key_name => &mut self.#key_name
+                    #key_enum_name::#key_name => &mut self.#key_name,
                 }
             },
         );
@@ -266,7 +423,7 @@ fn generate_impl_map_value(
         key_enum_name,
         |enum_name, variant_name, skip_fields, key_enum_name, key_name| {
             quote! {
-                #enum_name::#variant_name #skip_fields => #key_enum_name::#key_name
+                #enum_name::#variant_name #skip_fields => #key_enum_name::#key_name,
             }
         },
     );
