@@ -27,7 +27,7 @@ impl KeyNameAttr {
 #[derive(FromDeriveInput, Default, Debug)]
 #[darling(default, attributes(EnumMap))]
 pub(crate) struct MapAttr {
-    name: Option<String>,
+    keys: Option<String>,
     map: Option<String>,
 }
 
@@ -72,7 +72,7 @@ impl ToTokens for MapType {
 
 impl MapAttr {
     pub(crate) fn enum_name(&self, enum_name: Ident) -> Ident {
-        self.name
+        self.keys
             .as_ref()
             .map(|name| format_ident!("{}", name))
             .unwrap_or_else(|| enum_name)
