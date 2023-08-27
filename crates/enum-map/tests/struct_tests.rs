@@ -139,8 +139,8 @@ mod user {
     impl Index<MyEnumKey> for MyStruct {
         type Output = Option<MyEnum>;
 
-        fn index(&self, index: MyEnumKey) -> &Self::Output {
-            match index {
+        fn index(&self, key: MyEnumKey) -> &Self::Output {
+            match key {
                 MyEnumKey::A => &self.A,
                 MyEnumKey::B => &self.B,
                 MyEnumKey::C => &self.C,
@@ -150,8 +150,8 @@ mod user {
     }
 
     impl IndexMut<MyEnumKey> for MyStruct {
-        fn index_mut(&mut self, index: MyEnumKey) -> &mut Self::Output {
-            match index {
+        fn index_mut(&mut self, key: MyEnumKey) -> &mut Self::Output {
+            match key {
                 MyEnumKey::A => &mut self.A,
                 MyEnumKey::B => &mut self.B,
                 MyEnumKey::C => &mut self.C,

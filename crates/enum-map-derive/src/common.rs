@@ -1,6 +1,7 @@
 use darling::FromVariant;
+use proc_macro2::TokenStream;
 use quote::{quote};
-use syn::{DataEnum, Generics, Ident, Variant};
+use syn::{DataEnum, Ident, Variant};
 use crate::attrs::{KeyNameAttr, MapType};
 
 pub(crate) fn generate_key_enum(
@@ -23,6 +24,7 @@ pub(crate) fn generate_key_enum(
         }
     });
 
+    // TODO cleanup useless derives, check if serde derives and #[serde(rename)] attributes are required on keys
     let derives_quote = match map_type {
         MapType::HashMap => {
             quote! { #[derive(Debug, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize)] }
@@ -30,6 +32,7 @@ pub(crate) fn generate_key_enum(
         MapType::BTreeMap => {
             quote! { #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde::Serialize, ::serde::Deserialize)] }
         }
+        MapType::StructMap => { quote! {#[derive(Debug, ::serde::Serialize, ::serde::Deserialize)] } }
     };
 
     quote! {
@@ -40,17 +43,10 @@ pub(crate) fn generate_key_enum(
     }
 }
 
-
-pub(crate) fn generate_impl_map_value(
-    _map_type: &MapType,
-    enum_type: (&Generics, &Ident),
-    enum_data: &DataEnum,
-    key_enum_name: &Ident,
-) -> proc_macro2::TokenStream {
-    let (generics, enum_name) = enum_type;
-
-    let match_case = enum_data.variants.iter().map(|variant| {
-        let key_name = KeyNameAttr::from_variant(variant)
+pub(crate) fn enum_entries_map_to<F>(enum_name: &Ident, enum_data: &DataEnum, key_enum_name: &Ident, to: F) -> TokenStream
+    where F: Fn(&Ident, &Ident, Option<Option<TokenStream>>, &Ident, &Ident) -> TokenStream {
+    let match_cases = enum_data.variants.iter().map(|variant| {
+        let key_name = &KeyNameAttr::from_variant(variant)
             .expect("Wrong key_name options")
             .key_name(variant);
 
@@ -66,32 +62,17 @@ pub(crate) fn generate_impl_map_value(
         } else {
             None
         }
-            .map(|fields| {
-                let skip_fields = fields.iter().map(|_| quote!(_));
-                Some(quote! { (#(#skip_fields),*) })
-            });
+        .map(|fields| {
+            let skip_fields = fields.iter().map(|_| quote!(_));
+            Some(quote! { (#(#skip_fields),*) })
+        });
 
-        quote! {
-            #enum_name::#ident #skip_fields => #key_enum_name::#key_name
-        }
+        let to = to(enum_name, ident, skip_fields, key_enum_name, key_name);
+
+        to
     });
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
-        impl #impl_generics MapValue for #enum_name #ty_generics #where_clause {
-            type Key = #key_enum_name;
-            type Map = Map<Self::Key, Self>;
-
-            fn to_key(&self) -> Self::Key {
-                match self {
-                    #(#match_case),*
-                }
-            }
-
-
-            fn make_map() -> Self::Map {
-               Self::Map::default()
-            }
-        }
+        #(#match_cases),*
     }
 }
