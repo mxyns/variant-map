@@ -1,13 +1,14 @@
-mod maps;
-mod common;
 mod attrs;
+mod common;
+mod maps;
 mod structs;
 
-use darling::{FromDeriveInput};
+use crate::attrs::{MapAttr, MapType};
+use crate::common::EnumType;
+use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
-use crate::attrs::{MapAttr, MapType};
 
 // TODO [x] rename keys and key enum
 // TODO [x] merge make_map with impl EnumMapValue
@@ -17,7 +18,8 @@ use crate::attrs::{MapAttr, MapType};
 // TODO [3/3] cleanup -derive code, split into functions, into different files
 // TODO [2/2] handle generics + bounds
 // TODO [1/2] add struct and array versions of the "map"
-// TODO handle generics on struct
+    // TODO [x] handle generics on struct
+    // TODO (de)serialize derive on struct
 // TODO custom visibility on keys, struct, impls, etc.
 // TODO trait for all maps
 // TODO? tight couple Map and MapValue if possible
@@ -26,7 +28,7 @@ use crate::attrs::{MapAttr, MapType};
 
 #[proc_macro_derive(EnumMap, attributes(EnumMap, key_name))]
 pub fn derive_enum_map(input: TokenStream) -> TokenStream {
-    let mut ast = parse_macro_input!(input as DeriveInput);
+    let ast = parse_macro_input!(input as DeriveInput);
 
     let enum_name = ast.ident.clone();
 
@@ -39,13 +41,16 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
         )
     };
 
+    let enum_type = &EnumType {
+        enum_name: &enum_name,
+        generics: &ast.generics,
+    };
     let map_impl = match map_type {
-        MapType::HashMap
-        | MapType::BTreeMap => {
-            maps::generate_map_code(&mut ast, &map_type, &enum_name, &key_enum_name)
+        MapType::HashMap | MapType::BTreeMap => {
+            maps::generate_map_code(&ast, &map_type, enum_type, &key_enum_name)
         }
-        MapType::StructMap => {
-            structs::generate_struct_code(&mut ast, &map_type, &enum_name, &key_enum_name)
+        MapType::Struct => {
+            structs::generate_struct_code(&ast, &map_type, enum_type, &key_enum_name)
         }
     };
 

@@ -1,8 +1,13 @@
+use crate::attrs::{KeyNameAttr, MapType};
 use darling::FromVariant;
 use proc_macro2::TokenStream;
-use quote::{quote};
-use syn::{DataEnum, Ident, Variant};
-use crate::attrs::{KeyNameAttr, MapType};
+use quote::quote;
+use syn::{DataEnum, Generics, Ident, Variant};
+
+pub struct EnumType<'a> {
+    pub(crate) generics: &'a Generics,
+    pub(crate) enum_name: &'a Ident,
+}
 
 pub(crate) fn generate_key_enum(
     map_type: &MapType,
@@ -32,7 +37,9 @@ pub(crate) fn generate_key_enum(
         MapType::BTreeMap => {
             quote! { #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde::Serialize, ::serde::Deserialize)] }
         }
-        MapType::StructMap => { quote! {#[derive(Debug, ::serde::Serialize, ::serde::Deserialize)] } }
+        MapType::Struct => {
+            quote! {#[derive(Debug, ::serde::Serialize, ::serde::Deserialize)] }
+        }
     };
 
     quote! {
@@ -43,8 +50,15 @@ pub(crate) fn generate_key_enum(
     }
 }
 
-pub(crate) fn enum_entries_map_to<F>(enum_name: &Ident, enum_data: &DataEnum, key_enum_name: &Ident, to: F) -> TokenStream
-    where F: Fn(&Ident, &Ident, Option<Option<TokenStream>>, &Ident, &Ident) -> TokenStream {
+pub(crate) fn enum_entries_map_to<F>(
+    enum_name: &Ident,
+    enum_data: &DataEnum,
+    key_enum_name: &Ident,
+    to: F,
+) -> TokenStream
+where
+    F: Fn(&Ident, &Ident, Option<Option<TokenStream>>, &Ident, &Ident) -> TokenStream,
+{
     let match_cases = enum_data.variants.iter().map(|variant| {
         let key_name = &KeyNameAttr::from_variant(variant)
             .expect("Wrong key_name options")
@@ -67,9 +81,7 @@ pub(crate) fn enum_entries_map_to<F>(enum_name: &Ident, enum_data: &DataEnum, ke
             Some(quote! { (#(#skip_fields),*) })
         });
 
-        let to = to(enum_name, ident, skip_fields, key_enum_name, key_name);
-
-        to
+        to(enum_name, ident, skip_fields, key_enum_name, key_name)
     });
 
     quote! {

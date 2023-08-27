@@ -1,7 +1,6 @@
+use enum_map::common::MapValue;
 use serde_json::{Map as SerdeMap, Value};
 use user::{MyEnum, MyEnumKey};
-use enum_map::common::MapValue;
-
 
 #[allow(non_snake_case, dead_code)]
 mod user {
@@ -14,11 +13,11 @@ mod user {
     use std::ops::{Index, IndexMut};
 
     #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub enum MyEnum {
+    pub enum MyEnum<T> {
         A,
         B(i32),
         C,
-        D(i64),
+        D(T),
     }
 
     #[derive(Debug, PartialEq, Eq)]
@@ -30,11 +29,11 @@ mod user {
     }
 
     #[derive(Debug, Default)]
-    pub struct MyStruct {
-        A: Option<MyEnum>,
-        B: Option<MyEnum>,
-        C: Option<MyEnum>,
-        D: Option<MyEnum>,
+    pub struct MyStruct<T> {
+        A: Option<MyEnum<T>>,
+        B: Option<MyEnum<T>>,
+        C: Option<MyEnum<T>>,
+        D: Option<MyEnum<T>>,
     }
 
     impl Serialize for MyStruct {
@@ -178,7 +177,6 @@ mod user {
         }
     }
 }
-
 
 #[test]
 pub fn ensure_correct_key() {

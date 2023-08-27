@@ -36,7 +36,7 @@ pub(crate) enum MapType {
     #[default]
     HashMap,
     BTreeMap,
-    StructMap
+    Struct,
 }
 
 impl TryFrom<&String> for MapType {
@@ -46,7 +46,7 @@ impl TryFrom<&String> for MapType {
         match value.to_lowercase().as_str() {
             "hashmap" => Ok(Self::HashMap),
             "btreemap" => Ok(Self::BTreeMap),
-            "structmap" => Ok(Self::StructMap),
+            "structmap" => Ok(Self::Struct),
             _ => Err("Invalid 'map' argument, available {{ \"hashmap\", \"btreemap\" }}".into()),
         }
     }
@@ -61,7 +61,7 @@ impl ToTokens for MapType {
             MapType::BTreeMap => {
                 quote!(btreemap)
             }
-            MapType::StructMap => {
+            MapType::Struct => {
                 quote!()
             }
         };
