@@ -1,6 +1,8 @@
+use std::ops::Deref;
 use darling::{FromDeriveInput, FromMeta, FromVariant};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Ident, Variant, Visibility};
+use syn::{DeriveInput, Ident, Variant, Visibility};
+use crate::common::EnumType;
 
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
@@ -24,14 +26,96 @@ impl KeyNameAttr {
     }
 }
 
-#[derive(FromDeriveInput, Default, Debug)]
-#[darling(default, attributes(EnumMap))]
-pub(crate) struct MapAttr {
-    keys: Option<String>,
-    map: Option<String>,
+#[derive(Default, Debug, FromDeriveInput)]
+#[darling(default, attributes(VariantStore))]
+pub(crate) struct BaseAttr {
+    pub(crate) datastruct: Option<String>,
+    pub(crate) keys: Option<String>,
     pub(crate) visibility: Option<Visibility>,
-    pub(crate) struct_name: Option<String>,
-    pub(crate) struct_features: StructMapFeaturesAttr,
+}
+
+impl BaseAttr {
+    pub(crate) fn keys_name(&self, enum_name: Ident) -> Ident {
+        self.keys
+            .as_ref()
+            .map(|name| format_ident!("{}", name))
+            .unwrap_or_else(|| enum_name)
+    }
+
+    pub(crate) fn map_type(&self) -> MapType {
+        if let Some(name) = &self.datastruct {
+            MapType::try_from(name).unwrap()
+        } else {
+            MapType::default()
+        }
+    }
+}
+
+
+#[derive(Default, Debug, FromDeriveInput)]
+#[darling(default, attributes(VariantMap))]
+pub(crate) struct MapAttr {
+    #[darling(skip)]
+    base: BaseAttr,
+}
+
+impl MapAttr {
+    pub(crate) fn new(ast: &DeriveInput) -> Self {
+        Self {
+            base: BaseAttr::from_derive_input(&ast).expect("Wrong VariantStore parameters"),
+            ..Self::from_derive_input(&ast).expect("Wrong VariantMap parameters")
+        }
+    }
+}
+
+impl From<BaseAttr> for MapAttr {
+    fn from(base: BaseAttr) -> Self {
+        Self {
+            base
+        }
+    }
+}
+
+impl Deref for MapAttr {
+    type Target = BaseAttr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+#[derive(FromDeriveInput, Default, Debug)]
+#[darling(default, attributes(VariantStruct))]
+pub(crate) struct StructAttr {
+    #[darling(skip)]
+    base: BaseAttr,
+    name: Option<String>,
+    pub(crate) features: StructMapFeaturesAttr,
+}
+
+impl StructAttr {
+    pub(crate) fn new(ast: &DeriveInput) -> Self {
+        Self {
+            base: BaseAttr::from_derive_input(&ast).expect("Wrong VariantStore parameters"),
+            ..StructAttr::from_derive_input(&ast).expect("Wrong VariantStruct parameters")
+        }
+    }
+
+    pub(crate) fn struct_name(&self, enum_type: &EnumType) -> Ident {
+        if let Some(ref name) = self.name {
+            Ident::from_string(name.as_str()).unwrap()
+        } else {
+            format_ident!("{}StructMap", enum_type.enum_name)
+        }
+    }
+}
+
+impl Deref for StructAttr {
+    type Target = BaseAttr;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 #[derive(Default, Debug, FromMeta)]
@@ -84,22 +168,5 @@ impl ToTokens for MapType {
         };
 
         token.to_tokens(tokens);
-    }
-}
-
-impl MapAttr {
-    pub(crate) fn keys_name(&self, enum_name: Ident) -> Ident {
-        self.keys
-            .as_ref()
-            .map(|name| format_ident!("{}", name))
-            .unwrap_or_else(|| enum_name)
-    }
-
-    pub(crate) fn map_type(&self) -> MapType {
-        if let Some(name) = &self.map {
-            MapType::try_from(name).unwrap()
-        } else {
-            MapType::default()
-        }
     }
 }

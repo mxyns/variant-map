@@ -1,4 +1,4 @@
-use crate::attrs::{MapAttr, MapType};
+use crate::attrs::{MapType, MapAttr};
 use crate::common;
 use crate::common::EnumType;
 use proc_macro2::TokenStream;
@@ -26,11 +26,13 @@ fn generate_impl_key_trait_for_key_enum(
 
 pub(crate) fn generate_map_code(
     ast: &DeriveInput,
-    map_attr: &MapAttr,
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> TokenStream {
+) -> (TokenStream, TokenStream) {
+
+    let map_attr = &MapAttr::new(ast);
+
     match &ast.data {
         syn::Data::Enum(ref enum_data) => {
             let key_enum_quote = common::generate_key_enum(map_type, map_attr, enum_data, key_enum_name);
@@ -41,20 +43,20 @@ pub(crate) fn generate_map_code(
             let impl_hash_key_for_enum_key_quote =
                 generate_impl_key_trait_for_key_enum(map_type, key_enum_name);
 
-            quote! {
-                use _enum_map::#map_type::*;
-
-
+            let out_of_const = quote! {
                 #key_enum_quote
+            };
 
-
+            let inside_const = quote! {
+                use _enum_map::#map_type::*;
                 #impl_map_value_for_enum_quote
 
-
                 #impl_hash_key_for_enum_key_quote
-            }
+            };
+
+            (out_of_const, inside_const)
         }
-        _ => syn::Error::new(ast.span(), "EnumMap works only on enums").into_compile_error(),
+        _ => (syn::Error::new(ast.span(), "VariantMap works only on enums").into_compile_error(), quote!()),
     }
 }
 

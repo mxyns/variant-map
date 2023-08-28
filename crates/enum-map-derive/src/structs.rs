@@ -1,5 +1,4 @@
-use darling::FromMeta;
-use crate::attrs::{MapAttr, MapType};
+use crate::attrs::{StructAttr, MapType};
 use crate::common;
 use crate::common::EnumType;
 use proc_macro2::{Ident, TokenStream};
@@ -9,23 +8,22 @@ use syn::{Data, DataEnum, DeriveInput, GenericParam, Lifetime, LifetimeParam, Ty
 
 pub(crate) fn generate_struct_code(
     ast: &DeriveInput,
-    map_attr: &MapAttr,
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> TokenStream {
+) -> (TokenStream, TokenStream) {
+
+    let struct_attr = &StructAttr::new(&ast);
+
     match &ast.data {
         Data::Enum(ref enum_data) => {
 
-            let struct_name = &map_attr.struct_name.as_ref()
-                .map_or_else(|| format_ident!("{}StructMap", enum_type.enum_name), |s| {
-                    Ident::from_string(s.as_str()).unwrap()
-                });
+            let struct_name = &struct_attr.struct_name(enum_type);
 
-            let key_enum_quote = common::generate_key_enum(map_type, map_attr, enum_data, key_enum_name);
+            let key_enum_quote = common::generate_key_enum(map_type, struct_attr, enum_data, key_enum_name);
 
             let enum_struct_quote =
-                generate_enum_struct_code(map_attr, enum_type, enum_data, key_enum_name, struct_name);
+                generate_enum_struct_code(struct_attr, enum_type, enum_data, key_enum_name, struct_name);
 
             let impl_struct_map_functions_quote =
                 generate_enum_struct_impl(enum_type, enum_data, key_enum_name, struct_name);
@@ -34,22 +32,24 @@ pub(crate) fn generate_struct_code(
                 generate_impl_map_value(struct_name, enum_type, enum_data, key_enum_name);
 
             let impl_index =
-                if !map_attr.struct_features.use_index() { None }
+                if !struct_attr.features.use_index() { None }
                 else { Some(generate_impl_index(enum_type, enum_data, key_enum_name, struct_name)) };
 
             let impl_serialize =
-                if !map_attr.struct_features.use_serialize() { None }
+                if !struct_attr.features.use_serialize() { None }
                 else { Some(generate_impl_serialize(struct_name, enum_type, enum_data, key_enum_name)) };
 
             let impl_deserialize =
-                if !map_attr.struct_features.use_deserialize() { None }
+                if !struct_attr.features.use_deserialize() { None }
                 else { Some(generate_impl_deserialize(struct_name, enum_type, enum_data, key_enum_name)) };
 
-            quote! {
+            let out_of_const = quote! {
                 #key_enum_quote
 
                 #enum_struct_quote
+            };
 
+            let inside_const = quote! {
                 #impl_struct_map_functions_quote
 
                 #impl_index
@@ -59,9 +59,11 @@ pub(crate) fn generate_struct_code(
                 #impl_serialize
 
                 #impl_deserialize
-            }
+            };
+
+            (out_of_const, inside_const)
         }
-        _ => syn::Error::new(ast.span(), "EnumMap works only on enums").into_compile_error(),
+        _ => (syn::Error::new(ast.span(), "EnumMap works only on enums").into_compile_error(), quote!()),
     }
 }
 
@@ -295,7 +297,7 @@ fn generate_enum_struct_impl(
 }
 
 fn generate_enum_struct_code(
-    map_attr: &MapAttr,
+    map_attr: &StructAttr,
     enum_type: &EnumType,
     enum_data: &DataEnum,
     key_enum_name: &Ident,

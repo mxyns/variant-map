@@ -1,4 +1,4 @@
-use crate::attrs::{KeyNameAttr, MapAttr, MapType};
+use crate::attrs::{KeyNameAttr, MapType, BaseAttr};
 use darling::FromVariant;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -12,7 +12,7 @@ pub struct EnumType<'a> {
 
 pub(crate) fn generate_key_enum(
     map_type: &MapType,
-    map_attr: &MapAttr,
+    map_attr: &BaseAttr,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
 ) -> proc_macro2::TokenStream {
