@@ -1,5 +1,5 @@
 [package]
-name = "enum-map"
+name = "variant-map"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,10 +11,10 @@ path = "tests/tests.rs"
 
 [dependencies]
 serde = { version = "1.0.183", features = ["derive"] }
-enum-map-derive = { path = "../enum-map-derive", default-features = false, optional = true }
+variant-map-derive = { path = "../variant-map-derive", default-features = false, optional = true }
 
 [features]
-derive = ["dep:enum-map-derive"]
+derive = ["dep:variant-map-derive"]
 macros = []
 
 [dev-dependencies]

@@ -3,7 +3,6 @@ use crate::common;
 use crate::common::EnumType;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::spanned::Spanned;
 use syn::{DataEnum, DeriveInput, Ident};
 
 fn generate_impl_key_trait_for_key_enum(
@@ -29,7 +28,7 @@ pub(crate) fn generate_map_code(
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> (TokenStream, TokenStream) {
+) -> Result<(TokenStream, TokenStream), ()> {
 
     let map_attr = &MapAttr::new(ast);
 
@@ -48,15 +47,15 @@ pub(crate) fn generate_map_code(
             };
 
             let inside_const = quote! {
-                use _enum_map::#map_type::*;
+                use _variant_map::#map_type::*;
                 #impl_map_value_for_enum_quote
 
                 #impl_hash_key_for_enum_key_quote
             };
 
-            (out_of_const, inside_const)
+            Ok((out_of_const, inside_const))
         }
-        _ => (syn::Error::new(ast.span(), "VariantMap works only on enums").into_compile_error(), quote!()),
+        _ => Err(()),
     }
 }
 

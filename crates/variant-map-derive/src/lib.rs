@@ -9,6 +9,7 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
+use syn::spanned::Spanned;
 
 // TODO [x] rename keys and key enum
 // TODO [x] merge make_map with impl EnumMapValue
@@ -24,7 +25,7 @@ use syn::{parse_macro_input, DeriveInput};
 // TODO [x] custom visibility on keys, struct, impls, etc.
 // TODO [x] split EnumMap and EnumStruct derive into 2 functions with different attributes
     // TODO [x] move declared structs
-// TODO rename crate to something unused
+// TODO [x] rename crate to something unused
 // TODO doc
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
@@ -37,7 +38,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let enum_name = ast.ident.clone();
 
-    // EnumMap attribute parameters
+    // VariantStore attribute parameters
     let (key_enum_name, map_type) = {
         let base_attr = BaseAttr::from_derive_input(&ast).expect("Wrong VariantStore parameters");
 
@@ -52,13 +53,18 @@ pub fn derive(input: TokenStream) -> TokenStream {
         generics: &ast.generics,
     };
 
-    let (out_of_const, inside_const) = match map_type {
+    let result = match map_type {
         MapType::HashMap | MapType::BTreeMap => {
             maps::generate_map_code(&ast, &map_type, enum_type, &key_enum_name)
         }
         MapType::Struct => {
             structs::generate_struct_code(&ast, &map_type, enum_type, &key_enum_name)
         }
+    };
+
+    let (out_of_const, inside_const) = match result {
+        Ok( tup ) => tup,
+        Err(_) => (syn::Error::new(ast.span(), "VariantStore works only on enums").into_compile_error(), quote!())
     };
 
     let result = quote! {
@@ -69,9 +75,9 @@ pub fn derive(input: TokenStream) -> TokenStream {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const _: () = {
             #[allow(unused_extern_crates, clippy::useless_attribute)]
-            extern crate enum_map as _enum_map;
-            use _enum_map::common::*;
-            use _enum_map::serde;
+            extern crate variant_map as _variant_map;
+            use _variant_map::common::*;
+            use _variant_map::serde;
 
             #inside_const
         };

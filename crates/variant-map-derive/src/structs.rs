@@ -11,7 +11,7 @@ pub(crate) fn generate_struct_code(
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> (TokenStream, TokenStream) {
+) -> Result<(TokenStream, TokenStream), ()> {
 
     let struct_attr = &StructAttr::new(&ast);
 
@@ -28,7 +28,7 @@ pub(crate) fn generate_struct_code(
             let impl_struct_map_functions_quote =
                 generate_enum_struct_impl(enum_type, enum_data, key_enum_name, struct_name);
 
-            let impl_enum_map_value =
+            let impl_map_value =
                 generate_impl_map_value(struct_name, enum_type, enum_data, key_enum_name);
 
             let impl_index =
@@ -54,16 +54,16 @@ pub(crate) fn generate_struct_code(
 
                 #impl_index
 
-                #impl_enum_map_value
+                #impl_map_value
 
                 #impl_serialize
 
                 #impl_deserialize
             };
 
-            (out_of_const, inside_const)
+            Ok((out_of_const, inside_const))
         }
-        _ => (syn::Error::new(ast.span(), "EnumMap works only on enums").into_compile_error(), quote!()),
+        _ => Err(()),
     }
 }
 
@@ -124,7 +124,7 @@ fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_dat
     } = enum_type;
 
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
-    let visitor = format_ident!("__EnumMap__StructMap__{}__Visitor", key_enum_name);
+    let visitor = format_ident!("__VariantStore__StructMap__{}__Visitor", key_enum_name);
     let phantom = if generics.params.is_empty() { None } else {
         Some(
             quote! {

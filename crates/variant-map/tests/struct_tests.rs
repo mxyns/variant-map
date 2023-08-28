@@ -1,10 +1,10 @@
-use enum_map::common::MapValue;
+use variant_map::common::MapValue;
 use serde_json::{Map as SerdeMap, Value};
 use user::{MyEnum, MyEnumKey};
 
 #[allow(non_snake_case, dead_code)]
 mod user {
-    use enum_map::common::MapValue;
+    use variant_map::common::MapValue;
     use serde::de::{Visitor};
     use serde::ser::SerializeSeq;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};

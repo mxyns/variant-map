@@ -1,6 +1,6 @@
-use enum_map::common::MapValue;
-use enum_map::derive::{VariantStore};
-use enum_map::{as_key, as_map};
+use variant_map::common::MapValue;
+use variant_map::derive::{VariantStore};
+use variant_map::{as_key, as_map};
 use serde::{Deserialize, Serialize};
 
 fn normal_enum() {

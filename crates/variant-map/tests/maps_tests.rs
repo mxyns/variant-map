@@ -1,10 +1,10 @@
-use enum_map::common::MapValue;
+use variant_map::common::MapValue;
 use serde_json::{Map as SerdeMap, Value};
 use user::{MyEnum, MyEnumKey};
 
 mod user {
-    use enum_map::common::MapValue;
-    use enum_map::hashmap::{HashKey, Map};
+    use variant_map::common::MapValue;
+    use variant_map::hashmap::{HashKey, Map};
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::hash::Hash;

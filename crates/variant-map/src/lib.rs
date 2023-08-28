@@ -12,7 +12,7 @@ pub mod btreemap {
 }
 
 #[cfg(feature = "derive")]
-pub use enum_map_derive as derive;
+pub use variant_map_derive as derive;
 
 #[cfg(feature = "macros")]
 pub mod macros;

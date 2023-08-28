@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "crates/enum-map",
-    "crates/enum-map-derive",
+    "crates/variant-map",
+    "crates/variant-map-derive",
     "example"
 ]
 resolver = "2"
