@@ -18,12 +18,14 @@ use syn::{parse_macro_input, DeriveInput};
 // TODO [3/3] cleanup -derive code, split into functions, into different files
 // TODO [2/2] handle generics + bounds
 // TODO [1/2] add struct and array versions of the "map"
-    // TODO [x] handle generics on struct
-    // TODO [x] (de)serialize derive on struct
-// TODO add (de)serialize impl only if some attribute is set
+// TODO [x] handle generics on struct
+// TODO [x] (de)serialize derive on struct
+// TODO [x] add (de)serialize impl only if some attribute is set
 // TODO custom visibility on keys, struct, impls, etc.
 // TODO trait for all maps
 // TODO? tight couple Map and MapValue if possible
+// TODO split EnumMap and EnumStruct derive into 2 functions with different attributes
+// TODO rename crate to something unused
 // TODO doc
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
@@ -35,11 +37,12 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
     let enum_name = ast.ident.clone();
 
     // EnumMap attribute parameters
-    let (key_enum_name, map_type) = {
-        let key_enum_name_attr = MapAttr::from_derive_input(&ast).expect("Wrong enum_name options");
+    let (key_enum_name, map_type, map_attr) = {
+        let map_attr = MapAttr::from_derive_input(&ast).expect("Wrong EnumMap options");
         (
-            key_enum_name_attr.enum_name(format_ident!("{}Key", &enum_name)),
-            key_enum_name_attr.map_impl_mod(),
+            map_attr.keys_name(format_ident!("{}Key", &enum_name)),
+            map_attr.map_type(),
+            map_attr,
         )
     };
 
@@ -49,10 +52,10 @@ pub fn derive_enum_map(input: TokenStream) -> TokenStream {
     };
     let map_impl = match map_type {
         MapType::HashMap | MapType::BTreeMap => {
-            maps::generate_map_code(&ast, &map_type, enum_type, &key_enum_name)
+            maps::generate_map_code(&ast, &map_attr, &map_type, enum_type, &key_enum_name)
         }
         MapType::Struct => {
-            structs::generate_struct_code(&ast, &map_type, enum_type, &key_enum_name)
+            structs::generate_struct_code(&ast, &map_attr, &map_type, enum_type, &key_enum_name)
         }
     };
 

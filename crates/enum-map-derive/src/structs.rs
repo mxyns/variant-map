@@ -1,4 +1,4 @@
-use crate::attrs::MapType;
+use crate::attrs::{MapAttr, MapType};
 use crate::common;
 use crate::common::EnumType;
 use proc_macro2::{Ident, TokenStream};
@@ -8,6 +8,7 @@ use syn::{Data, DataEnum, DeriveInput, GenericParam, Lifetime, LifetimeParam, Ty
 
 pub(crate) fn generate_struct_code(
     ast: &DeriveInput,
+    map_attr: &MapAttr,
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
@@ -16,7 +17,6 @@ pub(crate) fn generate_struct_code(
         Data::Enum(ref enum_data) => {
             // TODO attribute for struct:
             // rename struct
-            // TODO move all automatically derived inside the functions
 
             let struct_name = &format_ident!("{}StructMap", enum_type.enum_name);
 
@@ -28,34 +28,34 @@ pub(crate) fn generate_struct_code(
             let impl_struct_map_functions_quote =
                 generate_enum_struct_impl(enum_type, enum_data, key_enum_name, struct_name);
 
-            let impl_index = generate_impl_index(enum_type, enum_data, key_enum_name, struct_name);
-
             let impl_enum_map_value =
                 generate_impl_map_value(struct_name, enum_type, enum_data, key_enum_name);
 
-            let impl_serialize = generate_impl_serialize(struct_name, enum_type, enum_data, key_enum_name);
+            let impl_index =
+                if !map_attr.struct_features.use_index() { None }
+                else { Some(generate_impl_index(enum_type, enum_data, key_enum_name, struct_name)) };
 
-            let impl_deserialize = generate_impl_deserialize(struct_name, enum_type, enum_data, key_enum_name);
+            let impl_serialize =
+                if !map_attr.struct_features.use_serialize() { None }
+                else { Some(generate_impl_serialize(struct_name, enum_type, enum_data, key_enum_name)) };
+
+            let impl_deserialize =
+                if !map_attr.struct_features.use_deserialize() { None }
+                else { Some(generate_impl_deserialize(struct_name, enum_type, enum_data, key_enum_name)) };
 
             quote! {
-                #[automatically_derived]
                 #key_enum_quote
 
-                #[automatically_derived]
                 #enum_struct_quote
 
-                #[automatically_derived]
                 #impl_struct_map_functions_quote
 
                 #impl_index
 
-                #[automatically_derived]
                 #impl_enum_map_value
 
-                #[automatically_derived]
                 #impl_serialize
 
-                #[automatically_derived]
                 #impl_deserialize
             }
         }
@@ -97,6 +97,7 @@ fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data:
 
     quote! {
         use ::serde::ser::SerializeSeq;
+        #[automatically_derived]
         impl #impl_generics ::serde::Serialize for #struct_name #type_generics #where_clause {
             fn serialize<__serde_S>(&self, serializer: __serde_S) -> Result<__serde_S::Ok, __serde_S::Error>
             where
@@ -119,7 +120,7 @@ fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_dat
     } = enum_type;
 
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
-    let visitor = format_ident!("__EnumMap__StructMap__{}__", key_enum_name);
+    let visitor = format_ident!("__EnumMap__StructMap__{}__Visitor", key_enum_name);
     let phantom = if generics.params.is_empty() { None } else {
         Some(
             quote! {
@@ -192,10 +193,13 @@ fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_dat
     };
 
     quote! {
+        #[automatically_derived]
         #visitor_quote
 
+        #[automatically_derived]
         #impl_visitor
 
+        #[automatically_derived]
         #impl_deserialize_struct
     }
 }
@@ -258,6 +262,7 @@ fn generate_enum_struct_impl(
     };
 
     quote! {
+        #[automatically_derived]
         #[allow(dead_code)]
         impl #impl_generics #struct_name #type_generics #where_clause {
             fn remove(&mut self, key: &#key_enum_name) -> Option<#enum_name_w_generics> {
@@ -320,6 +325,7 @@ fn generate_enum_struct_code(
     );
 
     quote! {
+        #[automatically_derived]
         #[derive(Debug)]
         #[allow(non_snake_case)]
         struct #struct_name #type_generics #where_clause  {
@@ -430,6 +436,7 @@ fn generate_impl_map_value(
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
+        #[automatically_derived]
         impl #impl_generics MapValue for #enum_name #ty_generics #where_clause {
             type Key = #key_enum_name;
             type Map = #struct_name #ty_generics;

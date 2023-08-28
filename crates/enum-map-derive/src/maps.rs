@@ -1,4 +1,4 @@
-use crate::attrs::MapType;
+use crate::attrs::{MapAttr, MapType};
 use crate::common;
 use crate::common::EnumType;
 use proc_macro2::TokenStream;
@@ -10,15 +10,23 @@ fn generate_impl_key_trait_for_key_enum(
     map_type: &MapType,
     key_enum_name: &Ident,
 ) -> Option<TokenStream> {
-    match map_type {
+    if let Some(key_trait_impl) = match map_type {
         MapType::HashMap => Some(quote! {impl HashKey for #key_enum_name {}}),
         MapType::BTreeMap => Some(quote! {impl OrdHashKey for #key_enum_name {}}),
         MapType::Struct => None,
+    } {
+        Some(quote! {
+            #[automatically_derived]
+            #key_trait_impl
+        })
+    } else {
+        None
     }
 }
 
 pub(crate) fn generate_map_code(
     ast: &DeriveInput,
+    _map_attr: &MapAttr,
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
@@ -36,13 +44,13 @@ pub(crate) fn generate_map_code(
             quote! {
                 use _enum_map::#map_type::*;
 
-                #[automatically_derived]
+
                 #key_enum_quote
 
-                #[automatically_derived]
+
                 #impl_map_value_for_enum_quote
 
-                #[automatically_derived]
+
                 #impl_hash_key_for_enum_key_quote
             }
         }
@@ -74,6 +82,7 @@ pub(crate) fn generate_impl_map_value(
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     quote! {
+        #[automatically_derived]
         impl #impl_generics MapValue for #enum_name #ty_generics #where_clause {
             type Key = #key_enum_name;
             type Map = Map<Self::Key, Self>;

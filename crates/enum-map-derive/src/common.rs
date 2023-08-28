@@ -44,6 +44,7 @@ pub(crate) fn generate_key_enum(
     };
 
     quote! {
+        #[automatically_derived]
         #derives_quote
         enum #key_enum_name {
             #(#key_variants),*

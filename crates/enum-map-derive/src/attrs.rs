@@ -1,4 +1,4 @@
-use darling::{FromDeriveInput, FromVariant};
+use darling::{FromDeriveInput, FromMeta, FromVariant};
 use quote::{format_ident, quote, ToTokens};
 use syn::{Ident, Variant};
 
@@ -29,7 +29,23 @@ impl KeyNameAttr {
 pub(crate) struct MapAttr {
     keys: Option<String>,
     map: Option<String>,
+    pub(crate) struct_features: StructMapFeaturesAttr,
 }
+
+
+#[derive(Default, Debug, FromMeta)]
+pub(crate) struct StructMapFeaturesAttr {
+    serialize: Option<()>,
+    deserialize: Option<()>,
+    index: Option<()>,
+}
+
+impl StructMapFeaturesAttr {
+    pub(crate) fn use_serialize(&self) -> bool { self.serialize.is_some() }
+    pub(crate) fn use_deserialize(&self) -> bool { self.deserialize.is_some() }
+    pub(crate) fn use_index(&self) -> bool { self.index.is_some() }
+}
+
 
 #[derive(Default, Debug)]
 pub(crate) enum MapType {
@@ -71,14 +87,14 @@ impl ToTokens for MapType {
 }
 
 impl MapAttr {
-    pub(crate) fn enum_name(&self, enum_name: Ident) -> Ident {
+    pub(crate) fn keys_name(&self, enum_name: Ident) -> Ident {
         self.keys
             .as_ref()
             .map(|name| format_ident!("{}", name))
             .unwrap_or_else(|| enum_name)
     }
 
-    pub(crate) fn map_impl_mod(&self) -> MapType {
+    pub(crate) fn map_type(&self) -> MapType {
         if let Some(name) = &self.map {
             MapType::try_from(name).unwrap()
         } else {
