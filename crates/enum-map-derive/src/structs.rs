@@ -1,3 +1,4 @@
+use darling::FromMeta;
 use crate::attrs::{MapAttr, MapType};
 use crate::common;
 use crate::common::EnumType;
@@ -15,15 +16,16 @@ pub(crate) fn generate_struct_code(
 ) -> TokenStream {
     match &ast.data {
         Data::Enum(ref enum_data) => {
-            // TODO attribute for struct:
-            // rename struct
 
-            let struct_name = &format_ident!("{}StructMap", enum_type.enum_name);
+            let struct_name = &map_attr.struct_name.as_ref()
+                .map_or_else(|| format_ident!("{}StructMap", enum_type.enum_name), |s| {
+                    Ident::from_string(s.as_str()).unwrap()
+                });
 
-            let key_enum_quote = common::generate_key_enum(map_type, enum_data, key_enum_name);
+            let key_enum_quote = common::generate_key_enum(map_type, map_attr, enum_data, key_enum_name);
 
             let enum_struct_quote =
-                generate_enum_struct_code(enum_type, enum_data, key_enum_name, struct_name);
+                generate_enum_struct_code(map_attr, enum_type, enum_data, key_enum_name, struct_name);
 
             let impl_struct_map_functions_quote =
                 generate_enum_struct_impl(enum_type, enum_data, key_enum_name, struct_name);
@@ -293,6 +295,7 @@ fn generate_enum_struct_impl(
 }
 
 fn generate_enum_struct_code(
+    map_attr: &MapAttr,
     enum_type: &EnumType,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
@@ -324,11 +327,12 @@ fn generate_enum_struct_code(
         },
     );
 
+    let vis = &map_attr.visibility;
     quote! {
         #[automatically_derived]
         #[derive(Debug)]
         #[allow(non_snake_case)]
-        struct #struct_name #type_generics #where_clause  {
+        #vis struct #struct_name #type_generics #where_clause  {
             #fields
         }
 

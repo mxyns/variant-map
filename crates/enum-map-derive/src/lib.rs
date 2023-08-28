@@ -21,7 +21,8 @@ use syn::{parse_macro_input, DeriveInput};
 // TODO [x] handle generics on struct
 // TODO [x] (de)serialize derive on struct
 // TODO [x] add (de)serialize impl only if some attribute is set
-// TODO custom visibility on keys, struct, impls, etc.
+// TODO [1/2] custom visibility on keys, struct, impls, etc.
+    // TODO move declared structs
 // TODO trait for all maps
 // TODO? tight couple Map and MapValue if possible
 // TODO split EnumMap and EnumStruct derive into 2 functions with different attributes

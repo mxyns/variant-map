@@ -1,6 +1,6 @@
 use darling::{FromDeriveInput, FromMeta, FromVariant};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Ident, Variant};
+use syn::{Ident, Variant, Visibility};
 
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
@@ -29,9 +29,10 @@ impl KeyNameAttr {
 pub(crate) struct MapAttr {
     keys: Option<String>,
     map: Option<String>,
+    pub(crate) visibility: Option<Visibility>,
+    pub(crate) struct_name: Option<String>,
     pub(crate) struct_features: StructMapFeaturesAttr,
 }
-
 
 #[derive(Default, Debug, FromMeta)]
 pub(crate) struct StructMapFeaturesAttr {

@@ -1,4 +1,4 @@
-use crate::attrs::{KeyNameAttr, MapType};
+use crate::attrs::{KeyNameAttr, MapAttr, MapType};
 use darling::FromVariant;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -12,6 +12,7 @@ pub struct EnumType<'a> {
 
 pub(crate) fn generate_key_enum(
     map_type: &MapType,
+    map_attr: &MapAttr,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
 ) -> proc_macro2::TokenStream {
@@ -43,10 +44,11 @@ pub(crate) fn generate_key_enum(
         }
     };
 
+    let vis = &map_attr.visibility;
     quote! {
         #[automatically_derived]
         #derives_quote
-        enum #key_enum_name {
+        #vis enum #key_enum_name {
             #(#key_variants),*
         }
     }

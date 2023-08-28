@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 fn normal_enum() {
     #[derive(Serialize, Deserialize, EnumMap)]
-    #[EnumMap(keys = "TestKeys", map = "BTreeMap", struct_features(serialize, deserialize))]
+    #[EnumMap(keys = "TestKeys", map = "BTreeMap", visibility="pub")]
     enum TestEnum {
         A,
         B,
@@ -98,7 +98,7 @@ fn generic_enum_struct_map() {
     trait UselessTrait {}
     trait SuperUselessTrait {}
     #[derive(Debug, Serialize, Deserialize, EnumMap)]
-    #[EnumMap(keys = "TestKeys", map = "StructMap", struct_features(index, serialize, deserialize))]
+    #[EnumMap(keys = "TestKeys", map = "StructMap", struct_name = "TestStructMap", struct_features(index, serialize, deserialize))]
     enum TestEnum<T: UselessTrait> where T: SuperUselessTrait {
         A,
         B,

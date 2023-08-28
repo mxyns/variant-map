@@ -26,14 +26,14 @@ fn generate_impl_key_trait_for_key_enum(
 
 pub(crate) fn generate_map_code(
     ast: &DeriveInput,
-    _map_attr: &MapAttr,
+    map_attr: &MapAttr,
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
 ) -> TokenStream {
     match &ast.data {
         syn::Data::Enum(ref enum_data) => {
-            let key_enum_quote = common::generate_key_enum(map_type, enum_data, key_enum_name);
+            let key_enum_quote = common::generate_key_enum(map_type, map_attr, enum_data, key_enum_name);
 
             let impl_map_value_for_enum_quote =
                 generate_impl_map_value(map_type, enum_type, enum_data, key_enum_name);
