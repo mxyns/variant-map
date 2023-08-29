@@ -6,6 +6,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Data, DataEnum, DeriveInput, GenericParam, Lifetime, LifetimeParam, TypeGenerics, WhereClause};
 
+/// Main function generating the entire code for a `StructMap`
 pub(crate) fn generate_struct_code(
     ast: &DeriveInput,
     map_type: &MapType,
@@ -67,13 +68,19 @@ pub(crate) fn generate_struct_code(
     }
 }
 
-fn add_where_clause_enum_bound(where_clause: Option<&WhereClause>, enum_name: &Ident, type_generics: &TypeGenerics, bound: TokenStream) -> TokenStream {
+/// Adds a trait as bound for each type in the where clause and a bound on the enum type
+///
+/// # Example
+///
+/// `where T: SomeTrait` => `where T: SomeTrait + NewBound, Enum: NewBound`
+/// `None` => `where Enum: NewBound`
+pub(crate) fn where_clause_add_enum_bound(where_clause: Option<&WhereClause>, enum_name: &Ident, type_generics: &TypeGenerics, bound: TokenStream) -> TokenStream {
     let new_enum_bound = quote! { #enum_name #type_generics: #bound };
     let where_clause = where_clause.map(|where_clause| {
         let where_clause = common::where_clause_add_trait(where_clause, bound);
         quote! {
-        #where_clause, #new_enum_bound
-    }
+            #where_clause, #new_enum_bound
+        }
     }).unwrap_or_else(|| {
         quote! { where #new_enum_bound }
     });
@@ -81,7 +88,12 @@ fn add_where_clause_enum_bound(where_clause: Option<&WhereClause>, enum_name: &I
     where_clause
 }
 
-fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
+/// Generates an implementation of [Serialize][serde::Serialize] for the target enum
+///
+/// Adds a bound on generics for [Serialize][serde::Serialize] on the impl block
+///
+/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `serialize`
+pub(crate) fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
     let EnumType {
         enum_name,
         generics
@@ -97,7 +109,7 @@ fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data:
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     // Update where clause with Serialize trait
-    let where_clause = add_where_clause_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Serialize));
+    let where_clause = where_clause_add_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Serialize));
 
     quote! {
         use ::serde::ser::SerializeSeq;
@@ -117,6 +129,16 @@ fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data:
     }
 }
 
+/// Generates an implementation of [Deserialize<'_serde_deserializer_lifetime_de>][serde::Deserialize] for the target enum
+///
+/// Adds a bound on generics for [Deserialize<'_serde_deserializer_lifetime_de>][serde::Deserialize] on the impl block
+///
+/// The lifetime used is always `'_serde_deserializer_lifetime_de` make sure there are no collisions (which is unlikely)
+/// in the definition of the target enum
+///
+/// The visitor for the deserialization is called `__VariantStore__StructMap__{EnumName}__Visitor`, make sure there are collisions too
+///
+/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `deserialize`
 fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
     let EnumType {
         enum_name,
@@ -143,7 +165,7 @@ fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_dat
     generics.params.push(GenericParam::Lifetime(LifetimeParam::new(Lifetime::new("'_serde_deserializer_lifetime_de", impl_generics.span()))));
 
     // Update where clause with Deserialize trait
-    let where_clause = add_where_clause_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Deserialize<#deser_lifetime>));
+    let where_clause = where_clause_add_enum_bound(where_clause, enum_name, &type_generics, quote!(::serde::Deserialize<#deser_lifetime>));
 
     let (impl_generics, _, _) = generics.split_for_impl();
 
@@ -208,7 +230,10 @@ fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_dat
     }
 }
 
-fn generate_enum_struct_impl(
+/// Implements base methods on the `StructMap`
+///
+/// Defines `get` `get_mut` `insert` `remove`
+pub(crate) fn generate_enum_struct_impl(
     enum_type: &EnumType,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
@@ -296,7 +321,8 @@ fn generate_enum_struct_impl(
     }
 }
 
-fn generate_enum_struct_code(
+/// Generates the code for the `StructMap` definition and implements [Default][std::default::Default] on it
+pub(crate) fn generate_enum_struct_code(
     map_attr: &StructAttr,
     enum_type: &EnumType,
     enum_data: &DataEnum,
@@ -349,7 +375,10 @@ fn generate_enum_struct_code(
     }
 }
 
-fn generate_impl_index(
+/// Implements [Index][std::ops::Index] and [IndexMut][std::ops::IndexMut] for the `StructMap`
+///
+/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `index`
+pub(crate) fn generate_impl_index(
     enum_type: &EnumType,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
@@ -418,7 +447,10 @@ fn generate_impl_index(
     }
 }
 
-fn generate_impl_map_value(
+/// Implement the `MapValue` trait from `variant_map` for the Enum
+///
+/// This binds the Enum to its `StructMap` and its Key enum
+pub(crate) fn generate_impl_map_value(
     struct_name: &Ident,
     enum_type: &EnumType,
     enum_data: &DataEnum,

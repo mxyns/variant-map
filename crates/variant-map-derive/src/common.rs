@@ -5,17 +5,19 @@ use quote::quote;
 use syn::{DataEnum, Generics, Ident, Variant, WhereClause, WherePredicate};
 use syn::TypeParamBound::Verbatim;
 
+/// All required information about the type of an enum
 pub struct EnumType<'a> {
     pub(crate) generics: &'a Generics,
     pub(crate) enum_name: &'a Ident,
 }
 
+/// Generates an enum of Keys for the specified enum
 pub(crate) fn generate_key_enum(
     map_type: &MapType,
     map_attr: &BaseAttr,
     enum_data: &DataEnum,
     key_enum_name: &Ident,
-) -> proc_macro2::TokenStream {
+) -> TokenStream {
     let key_variants = enum_data.variants.iter().map(|variant| {
         let key_name_attr = KeyNameAttr::from_variant(variant).expect("Wrong key_name options");
 
@@ -54,6 +56,8 @@ pub(crate) fn generate_key_enum(
     }
 }
 
+/// Iterate on the variants of a map and generate a [TokenStream]
+/// The result contains the agglomeration of each [TokenStream] returned by `to: F` applied on each variant
 pub(crate) fn enum_entries_map_to<F>(
     enum_name: &Ident,
     enum_data: &DataEnum,
@@ -61,7 +65,7 @@ pub(crate) fn enum_entries_map_to<F>(
     to: F,
 ) -> TokenStream
 where
-    F: Fn(&Ident, &Ident, Option<Option<TokenStream>>, &Ident, &Ident) -> TokenStream,
+    F: Fn(&Ident, &Ident, Option<TokenStream>, &Ident, &Ident) -> TokenStream,
 {
     let match_cases = enum_data.variants.iter().map(|variant| {
         let key_name = &KeyNameAttr::from_variant(variant)
@@ -76,14 +80,10 @@ where
         } = variant;
 
         let skip_fields = if !fields.is_empty() {
-            Some(fields)
+            Some(quote!((..)))
         } else {
             None
-        }
-        .map(|fields| {
-            let skip_fields = fields.iter().map(|_| quote!(_));
-            Some(quote! { (#(#skip_fields),*) })
-        });
+        };
 
         to(enum_name, ident, skip_fields, key_enum_name, key_name)
     });
@@ -93,6 +93,7 @@ where
     }
 }
 
+/// Add a [Verbatim] bound to all bounded types of a where clause
 pub(crate) fn where_clause_add_trait(where_clause: &WhereClause, the_trait: TokenStream) -> WhereClause {
     let mut cloned = where_clause.clone();
     for predicate in cloned.predicates.iter_mut() {

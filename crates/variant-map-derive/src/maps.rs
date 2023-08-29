@@ -5,7 +5,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DeriveInput, Ident};
 
-fn generate_impl_key_trait_for_key_enum(
+/// Generates an implementation of the key trait
+///
+/// Each map (excepted `StructMap`) has associated bounds for its keys
+/// This function implements the corresponding trait for the generated Key Enum
+pub(crate) fn generate_impl_key_trait_for_key_enum(
     map_type: &MapType,
     key_enum_name: &Ident,
 ) -> Option<TokenStream> {
@@ -23,6 +27,7 @@ fn generate_impl_key_trait_for_key_enum(
     }
 }
 
+/// Main function generating all of the code necessary for maps
 pub(crate) fn generate_map_code(
     ast: &DeriveInput,
     map_type: &MapType,
@@ -59,6 +64,9 @@ pub(crate) fn generate_map_code(
     }
 }
 
+/// Generates an implementation of `MapValue` (from variant_map) for the target Enum
+///
+/// This binds the enum to its associated Map and Key types
 pub(crate) fn generate_impl_map_value(
     _map_type: &MapType,
     enum_type: &EnumType,

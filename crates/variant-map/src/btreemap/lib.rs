@@ -9,8 +9,14 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use crate::common::MapValue;
 
+
+/// Trait to implement on your Enum [Keys][crate::common::MapValue::Key]
+/// Required to be a key of a [Map]
 pub trait OrdHashKey: Ord + Eq + Hash {}
 
+
+/// [Map] wrapping a [BTreeMap] used as associated [Map][crate::common::MapValue::Map]
+/// Keys must implement [OrdHashKey]
 #[derive(Debug)]
 pub struct Map<Key, Value>
 where

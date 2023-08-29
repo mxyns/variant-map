@@ -1,7 +1,46 @@
-mod attrs;
-mod common;
-mod maps;
-mod structs;
+//! Enum variants stored in Maps.
+//!
+//! Provides derive macros for [variant_map]
+//!
+//! Includes a `StructMap` which is a struct with a field per variant of the enum
+//!
+//! Pro: This struct has instant access to the fields (compared to the other Maps that need a lookup)
+//!
+//! Con: Restricted API
+//!
+//! # Example
+//!
+//! ```
+//!     use variant_map_derive::VariantStore;
+//!
+//!     #[derive(VariantStore)]
+//!     enum MyEnum {
+//!         A,
+//!         B(i32),
+//!     }
+//! ```
+//!
+//! For more detailed examples check out the [example project](https://github.com/mxyns/variant-map/tree/master/example) on this crates' [repo](https://github.com/mxyns/variant-map/)
+//!
+//!
+
+/// Parameters of the macros attributes
+pub(crate) mod attrs;
+
+/// Helper functions for the [maps] and [structs] implementations
+pub(crate) mod common;
+
+/// Implementation of the derive for variant_map
+pub(crate) mod maps;
+
+/// Implementation of the derive for `StructMap`
+/// This type is derive-only (not included in the base crate)
+///
+/// This macro expansion contains a new Key Enum, a `struct` specific to the enum type
+/// with one field per variant
+///
+/// It also features implementation of the same traits as a normal variant Map
+pub(crate) mod structs;
 
 use crate::attrs::{MapType, BaseAttr};
 use crate::common::EnumType;
@@ -26,12 +65,39 @@ use syn::spanned::Spanned;
 // TODO [x] split EnumMap and EnumStruct derive into 2 functions with different attributes
     // TODO [x] move declared structs
 // TODO [x] rename crate to something unused
-// TODO doc
+// TODO check if serde rename is needed in keys
+// TODO no visibility specified means => inside const _ =
+// TODO [x] doc
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
-// TODO? trait for all maps
-// TODO? tight couple Map and MapValue if possible
+// TODO? trait for all maps to reduce duplicate code
+// TODO? tight couple Map trait and MapValue if possible
 
+/// The only derive macro of this crate
+///
+/// Apply it on an enum to automatically generate an enum of keys and a map to store the variants
+///
+/// # Arguments
+///
+/// `datastruct` : any of { `HashMap`, `BTreeMap`, `StructMap` }
+///
+/// default is `HashMap`
+///
+///
+/// `keys` : specify the name of the generated enum of keys
+///
+/// default is {EnumName}Key
+///
+///
+/// `visibility` : specify the [Visibility][::syn::Visibility] of the generated enums / structs
+/// associated to the target enum
+///
+/// default is private
+///
+/// See example in [BaseAttr]
+///
+/// See other attributes in [attrs]
+///
 #[proc_macro_derive(VariantStore, attributes(VariantStore, VariantMap, VariantStruct, key_name))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);

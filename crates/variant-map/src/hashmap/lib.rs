@@ -9,6 +9,9 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use crate::common::MapValue;
 
+
+/// [Map] wrapping a [HashMap] used as associated [Map][crate::common::MapValue::Map]
+/// Keys must implement [HashKey]
 #[derive(Debug)]
 pub struct Map<Key, Value>
 where
@@ -17,6 +20,8 @@ where
     inner: HashMap<Key, Value>,
 }
 
+/// Trait to implement on your Enum [Keys][crate::common::MapValue::Key]
+/// Required to be a key of a [Map]
 pub trait HashKey: Eq + Hash {}
 
 impl<K, V> Map<K, V>

@@ -4,6 +4,26 @@ use quote::{format_ident, quote, ToTokens};
 use syn::{DeriveInput, Ident, Variant, Visibility};
 use crate::common::EnumType;
 
+/// Attribute macro `key_name`
+/// Applied on an enum variant to specify its key's name in the `code` and when de/serialized by [serde]
+///
+/// # Example
+///
+/// ```
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(VariantStore)]
+/// enum MyEnum {
+///     A,
+///     #[key_name(code = "Bamboo", serde = "bamboo")]
+///     B
+/// }
+///
+/// fn main() {
+///     let key: MyEnumKey = MyEnumKey::Bamboo;
+///     assert_eq!("bamboo", serde_json::to_string(&key).unwrap().as_str());
+/// }
+/// ```
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
 pub(crate) struct KeyNameAttr {
@@ -26,6 +46,24 @@ impl KeyNameAttr {
     }
 }
 
+/// Parameters of the [crate::VariantStore] macro
+///
+/// # Example
+///
+/// ```
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(VariantStore)]
+/// #[VariantStore(keys = "MySuperKeys", datastruct = "BTreeMap", visibility="pub(crate)")]
+/// enum MyEnum {
+///     A
+/// }
+///
+/// fn main() {
+///     let key: MySuperKeys = MySuperKeys::A;
+///     // see macro expansion to check that the used inner map is a BTreeMap
+///     // and that the keys have pub(crate) visibility
+/// }
 #[derive(Default, Debug, FromDeriveInput)]
 #[darling(default, attributes(VariantStore))]
 pub(crate) struct BaseAttr {
@@ -52,6 +90,24 @@ impl BaseAttr {
 }
 
 
+/// Parameter macro `VariantMap` of the map types
+/// Has no specific attributes for now
+///
+/// # Example
+///
+/// ```
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(VariantStore)]
+/// #[VariantMap(/* nothing to do here */)]
+/// enum MyEnum {
+///     A
+/// }
+///
+/// fn main() {
+///     let key: MyEnumKey = MyEnumKey::A;
+/// }
+///
 #[derive(Default, Debug, FromDeriveInput)]
 #[darling(default, attributes(VariantMap))]
 pub(crate) struct MapAttr {
@@ -84,6 +140,33 @@ impl Deref for MapAttr {
     }
 }
 
+/// Parameter macro `VariantStruct` of the `StructMap` type
+///
+/// # Arguments
+///
+/// `name` : name of the generated struct
+///
+/// `features` : list of features (see [features][StructMapFeaturesAttr])
+///
+/// # Example
+///
+/// ```
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(VariantStore)]
+/// #[VariantStore(datastruct = "StructMap")]
+/// #[VariantStruct(name = "MySuperStruct", features(serialize, index))]
+/// enum MyEnum {
+///     A(i32)
+/// }
+///
+/// fn main() {
+///     let key: MyEnumKey = MyEnumKey::A;
+///     let mut map: MySuperStruct = MySuperStruct::default();
+///     map.A = Some(MyEnum::A(1));
+///     map.insert(MyEnum::A(1));
+/// }
+///
 #[derive(FromDeriveInput, Default, Debug)]
 #[darling(default, attributes(VariantStruct))]
 pub(crate) struct StructAttr {
@@ -118,6 +201,31 @@ impl Deref for StructAttr {
     }
 }
 
+/// Features for the `StructMap` derive
+///
+/// # Arguments
+///
+/// `serialize` if present, will derive [Serialize][serde::Serialize] for the struct
+///
+/// `deserialize` if present, will derive [Deserialize][serde::Deserialize] for the struct
+///
+/// `index` if present, will derive [Index][std::ops::Index] and [IndexMut][std::ops::IndexMut] for the struct
+///
+/// # Example
+///
+/// ```
+/// use serde::{Deserialize, Serialize};
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(Debug, Serialize, Deserialize, VariantStore)]
+/// #[VariantStore(keys = "TestKeys", datastruct = "StructMap")]
+/// #[VariantStruct(features(index, serialize, deserialize))]
+/// enum TestEnum {
+///     A,
+///     B(i32),
+/// }
+/// ```
+///
 #[derive(Default, Debug, FromMeta)]
 pub(crate) struct StructMapFeaturesAttr {
     serialize: Option<()>,
@@ -131,7 +239,12 @@ impl StructMapFeaturesAttr {
     pub(crate) fn use_index(&self) -> bool { self.index.is_some() }
 }
 
-
+/// Type of map selected with the `datastruct` attribute of [VariantStore][BaseAttr]
+///
+/// [MapType::HashMap] is from value `HashMap`
+/// [MapType::BTreeMap] is from value `BTreeMap`
+/// [MapType::Struct] is from value `StructMap`
+///
 #[derive(Default, Debug)]
 pub(crate) enum MapType {
     #[default]

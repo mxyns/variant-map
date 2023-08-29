@@ -1,9 +1,19 @@
+//! Example project showcasing the use of the [variant_map] and [variant_map_derive] crates.
+//!
+//! Each function shows a use of the library for the kind of (enum, map) pair in its name.
+
+#[allow(unused_imports)]
+use variant_map::derive as variant_map_derive;
+
+use variant_map;
 use variant_map::common::MapValue;
 use variant_map::derive::{VariantStore};
 use variant_map::{as_key, as_map};
 use serde::{Deserialize, Serialize};
 
-fn normal_enum() {
+/// A classic enum with unit and tuple variants
+/// [variant_map::btreemap::Map] using a [std::collections::BTreeMap] for this enum is derived and used
+pub fn normal_enum() {
     #[derive(Serialize, Deserialize, VariantStore)]
     #[VariantStore(keys = "TestKeys", datastruct = "BTreeMap", visibility="pub")]
     enum TestEnum {
@@ -30,11 +40,13 @@ fn normal_enum() {
     println!("{}", serde_json::to_string(&map).unwrap());
 }
 
-fn generic_enum() {
+/// A generic enum with unit and tuple variants
+/// [variant_map::hashmap::Map] using a [std::collections::HashMap] for this enum is derived and used
+pub fn generic_enum() {
     trait UselessTrait {}
     trait VeryUselessTrait {}
     #[derive(Serialize, Deserialize, VariantStore)]
-    #[VariantStore(keys = "TestKeys", datastruct = "BTreeMap")]
+    #[VariantStore(keys = "TestKeys", datastruct = "HashMap")]
     enum GenericEnum<T: VeryUselessTrait>
     where
         T: UselessTrait,
@@ -68,7 +80,9 @@ fn generic_enum() {
     println!("{}", serde_json::to_string(&map).unwrap());
 }
 
-fn normal_enum_struct_map() {
+/// A classic enum with unit and tuple variants
+/// Custom Struct with a field per variant for this enum is derived and used
+pub fn normal_enum_struct_map() {
     #[derive(Debug, Serialize, Deserialize, VariantStore)]
     #[VariantStore(keys = "TestKeys", datastruct = "StructMap")]
     #[VariantStruct(features(index, serialize, deserialize))]
@@ -80,6 +94,7 @@ fn normal_enum_struct_map() {
         #[serde(rename = "dimitri")]
         D(i32, u64, (u16, String)),
     }
+
     let mut map: as_map!(TestEnum) = TestEnum::make_map();
     map.insert(TestEnum::A);
     map.insert(TestEnum::B);
@@ -95,7 +110,9 @@ fn normal_enum_struct_map() {
     println!("{}", serde_json::to_string(&map).unwrap());
 }
 
-fn generic_enum_struct_map() {
+/// A generic enum with unit and tuple variants
+/// Custom Struct with a field per variant for this enum is derived and used
+pub fn generic_enum_struct_map() {
     trait UselessTrait {}
     trait SuperUselessTrait {}
     #[derive(Debug, Serialize, Deserialize, VariantStore)]
@@ -127,6 +144,8 @@ fn generic_enum_struct_map() {
     println!("{}", serde_json::to_string(&map).unwrap());
 }
 
+
+#[doc(hidden)]
 fn main() {
     normal_enum();
     generic_enum();

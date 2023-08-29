@@ -15,6 +15,7 @@ variant-map-derive = { path = "../variant-map-derive", default-features = false,
 
 [features]
 derive = ["dep:variant-map-derive"]
+struct-map = ["derive"]
 macros = []
 
 [dev-dependencies]
