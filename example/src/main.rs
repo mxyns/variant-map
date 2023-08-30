@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// [variant_map::btreemap::Map] using a [std::collections::BTreeMap] for this enum is derived and used
 pub fn normal_enum() {
     #[derive(Serialize, Deserialize, VariantStore)]
-    #[VariantStore(keys = "TestKeys", datastruct = "BTreeMap", visibility="pub")]
+    #[VariantStore(datastruct = "BTreeMap", visibility="out-of-scope", keys(name = "TestKeys", derive(::serde::Serialize, ::serde::Deserialize)))]
     enum TestEnum {
         A,
         B,
@@ -46,7 +46,7 @@ pub fn generic_enum() {
     trait UselessTrait {}
     trait VeryUselessTrait {}
     #[derive(Serialize, Deserialize, VariantStore)]
-    #[VariantStore(keys = "TestKeys", datastruct = "HashMap")]
+    #[VariantStore(datastruct = "HashMap", keys(name = "TestKeys", derive(::serde::Serialize, ::serde::Deserialize)))]
     enum GenericEnum<T: VeryUselessTrait>
     where
         T: UselessTrait,
@@ -84,13 +84,13 @@ pub fn generic_enum() {
 /// Custom Struct with a field per variant for this enum is derived and used
 pub fn normal_enum_struct_map() {
     #[derive(Debug, Serialize, Deserialize, VariantStore)]
-    #[VariantStore(keys = "TestKeys", datastruct = "StructMap")]
+    #[VariantStore(datastruct = "StructMap", keys(name = "TestKeys", derive(::serde::Serialize, ::serde::Deserialize)))]
     #[VariantStruct(features(index, serialize, deserialize))]
     enum TestEnum {
         A,
         B,
         C(i32),
-        #[key_name(code = "Dimitri", serde = "dimitri")]
+        #[key_name(code = "Dimitri", serde = "haha")]
         #[serde(rename = "dimitri")]
         D(i32, u64, (u16, String)),
     }
@@ -116,7 +116,7 @@ pub fn generic_enum_struct_map() {
     trait UselessTrait {}
     trait SuperUselessTrait {}
     #[derive(Debug, Serialize, Deserialize, VariantStore)]
-    #[VariantStore(keys = "TestKeys", datastruct = "StructMap")]
+    #[VariantStore(datastruct = "StructMap", keys(name = "TestKeys", derive(::serde::Serialize, ::serde::Deserialize)))]
     #[VariantStruct(name = "TestStructMap", features(index, serialize, deserialize))]
     enum TestEnum<T: UselessTrait> where T: SuperUselessTrait {
         A,

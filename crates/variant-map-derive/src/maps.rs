@@ -33,8 +33,7 @@ pub(crate) fn generate_map_code(
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> Result<(TokenStream, TokenStream), ()> {
-
+) -> Result<(Option<TokenStream>, Option<TokenStream>), ()> {
     let map_attr = &MapAttr::new(ast);
 
     match &ast.data {
@@ -47,18 +46,21 @@ pub(crate) fn generate_map_code(
             let impl_hash_key_for_enum_key_quote =
                 generate_impl_key_trait_for_key_enum(map_type, key_enum_name);
 
-            let out_of_const = quote! {
+            let (outside_const, inside_const) = common::in_or_out_scope(&map_attr.visibility, quote! {
                 #key_enum_quote
-            };
+            });
 
             let inside_const = quote! {
                 use _variant_map::#map_type::*;
+
+                #inside_const
+
                 #impl_map_value_for_enum_quote
 
                 #impl_hash_key_for_enum_key_quote
             };
 
-            Ok((out_of_const, inside_const))
+            Ok((outside_const, Some(inside_const)))
         }
         _ => Err(()),
     }

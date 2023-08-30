@@ -1,7 +1,9 @@
 use std::ops::Deref;
-use darling::{FromDeriveInput, FromMeta, FromVariant};
+use darling::{Error, FromDeriveInput, FromMeta, FromVariant};
+use darling::util::PathList;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{DeriveInput, Ident, Variant, Visibility};
+use syn::{DeriveInput, Expr, Ident, Lit, Variant, Visibility};
 use crate::common::EnumType;
 
 /// Attribute macro `key_name`
@@ -27,8 +29,11 @@ use crate::common::EnumType;
 #[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(key_name))]
 pub(crate) struct KeyNameAttr {
+    /// Name of the enum variant in the code
     code: Option<String>,
-    serde: Option<String>,
+
+    /// Name of the enum variant when de(serialized) by [serde]
+    serde: Option<String>
 }
 
 impl KeyNameAttr {
@@ -39,14 +44,29 @@ impl KeyNameAttr {
             .unwrap_or_else(|| variant.ident.clone())
     }
 
-    pub(crate) fn serde_rename(&self, variant: &Variant) -> String {
-        self.serde
-            .clone()
-            .unwrap_or_else(|| variant.ident.to_string())
+    pub(crate) fn serde_rename(&self) -> &Option<String> {
+        &self.serde
     }
 }
 
 /// Parameters of the [crate::VariantStore] macro
+///
+/// # Arguments
+///
+/// `datastruct` : any of { `HashMap`, `BTreeMap`, `StructMap` }
+///
+/// default is `HashMap`
+///
+///
+/// `keys` : specify the parameters for the generated enum of keys
+///
+/// see [attrs::BaseKeysAttr]
+///
+///
+/// `visibility` : specify the [Visibility][::syn::Visibility] of the generated enums / structs
+/// associated to the target enum
+///
+/// default is private
 ///
 /// # Example
 ///
@@ -54,7 +74,7 @@ impl KeyNameAttr {
 /// use variant_map_derive::VariantStore;
 ///
 /// #[derive(VariantStore)]
-/// #[VariantStore(keys = "MySuperKeys", datastruct = "BTreeMap", visibility="pub(crate)")]
+/// #[VariantStore(keys(name = "MySuperKeys"), datastruct = "BTreeMap", visibility="pub(crate)")]
 /// enum MyEnum {
 ///     A
 /// }
@@ -67,17 +87,127 @@ impl KeyNameAttr {
 #[derive(Default, Debug, FromDeriveInput)]
 #[darling(default, attributes(VariantStore))]
 pub(crate) struct BaseAttr {
+    /// [Type of the data structure][MapType] generated as a String
     pub(crate) datastruct: Option<String>,
-    pub(crate) keys: Option<String>,
-    pub(crate) visibility: Option<Visibility>,
+
+    /// Name of the generate Key enum
+    pub(crate) keys: Option<BaseKeysAttr>,
+
+    /// Visibility of the generated Key enum and other structs
+    #[darling(with="parse_visibility")]
+    pub(crate) visibility: OptionalVisibility,
+}
+
+/// Either an [OptionalVisibility::OutOfScope] or a classic [Visibility]
+///
+/// see [BaseAttr] and [parse_visibility] for more details
+#[derive(Debug)]
+pub(crate) enum OptionalVisibility {
+    /// User specified the `out-of-scope` Visibility
+    OutOfScope,
+    Specified(Visibility)
+}
+
+impl Default for OptionalVisibility {
+    fn default() -> Self {
+        /// Default is private / inherited
+        Self::Specified(Visibility::Inherited)
+    }
+}
+
+impl ToTokens for OptionalVisibility {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            OptionalVisibility::OutOfScope => { Visibility::Inherited.to_tokens(tokens )}
+            OptionalVisibility::Specified(ref vis) => { vis.to_tokens(tokens) }
+        }
+    }
+}
+
+/// Parses the `visibility` ([OptionalVisibility]) attribute of [BaseAttr] from a String literal
+///
+/// Unspecified is [OptionalVisibility::default]
+///
+/// `out-of-scope` is [OptionalVisibility::OutOfScope] meaning the types won't be accessible
+///
+/// Others are classic visibility tokens
+pub(crate) fn parse_visibility(meta: &syn::Meta) -> Result<OptionalVisibility, Error> {
+    let value = &meta.require_name_value()?.value;
+
+    let literal = match value {
+        Expr::Lit(ref lit) => {
+            lit
+        }
+        _ => return Err(Error::unexpected_expr_type(value))
+    };
+
+    let literal_str = match &literal.lit {
+        Lit::Str(ref str) => {
+            str.value()
+        }
+        _ => return Err(Error::unexpected_lit_type(&literal.lit))
+    };
+
+    let optional_visibility = match literal_str.as_str() {
+        "out-of-scope" => OptionalVisibility::OutOfScope,
+        _ => OptionalVisibility::Specified(Visibility::from_expr(&value)?)
+    };
+
+    Ok(optional_visibility)
+}
+
+/// Parameters of the Key enum given in [BaseAttr] (`VariantStore` parameter macro)
+///
+/// # Arguments
+///
+/// `name` : name of the generated Key Enum
+///
+/// `derive` : additional derives on the Key Enum
+///
+/// # Example
+///
+/// ```
+/// use variant_map_derive::VariantStore;
+///
+/// #[derive(VariantStore)]
+/// #[VariantStore(keys(name = "MySuperKeys", derive(::serde::Serialize)), datastruct = "BTreeMap", visibility="pub(crate)")]
+/// enum MyEnum {
+///     A
+/// }
+///
+/// fn main() {
+///     let key: MySuperKeys = MySuperKeys::A;
+///
+///     // Thanks to the "derive(::serde::Serialize)"
+///     println!("{}", serde_json::to_string(&key));
+///     // see macro expansion to check that the used inner map is a BTreeMap
+///     // and that the keys have pub(crate) visibility
+/// }
+#[derive(Debug, Default, FromMeta)]
+pub(crate) struct BaseKeysAttr {
+    pub(crate) name: Option<String>,
+    pub(crate) derive: Option<PathList>
 }
 
 impl BaseAttr {
     pub(crate) fn keys_name(&self, enum_name: Ident) -> Ident {
         self.keys
             .as_ref()
+            .map(|attrs| attrs.name.as_ref())
+            .flatten()
             .map(|name| format_ident!("{}", name))
-            .unwrap_or_else(|| enum_name)
+            .unwrap_or(enum_name)
+    }
+
+    pub(crate) fn keys_derive(&self) -> Option<TokenStream> {
+        self.keys
+            .as_ref()
+            .map(|attrs| attrs.derive.as_ref())
+            .flatten()
+            .map(|list| {
+                let quotes = list.iter().map(|v| v.into_token_stream());
+                quote!{ #(#quotes),* }
+            })
     }
 
     pub(crate) fn map_type(&self) -> MapType {
@@ -218,7 +348,7 @@ impl Deref for StructAttr {
 /// use variant_map_derive::VariantStore;
 ///
 /// #[derive(Debug, Serialize, Deserialize, VariantStore)]
-/// #[VariantStore(keys = "TestKeys", datastruct = "StructMap")]
+/// #[VariantStore(keys(name = "TestKeys"), datastruct = "StructMap")]
 /// #[VariantStruct(features(index, serialize, deserialize))]
 /// enum TestEnum {
 ///     A,

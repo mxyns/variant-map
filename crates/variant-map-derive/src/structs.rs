@@ -12,7 +12,7 @@ pub(crate) fn generate_struct_code(
     map_type: &MapType,
     enum_type: &EnumType,
     key_enum_name: &Ident,
-) -> Result<(TokenStream, TokenStream), ()> {
+) -> Result<(Option<TokenStream>, Option<TokenStream>), ()> {
 
     let struct_attr = &StructAttr::new(&ast);
 
@@ -44,13 +44,16 @@ pub(crate) fn generate_struct_code(
                 if !struct_attr.features.use_deserialize() { None }
                 else { Some(generate_impl_deserialize(struct_name, enum_type, enum_data, key_enum_name)) };
 
-            let out_of_const = quote! {
+
+            let (outside_const, inside_const) = common::in_or_out_scope(&struct_attr.visibility, quote! {
                 #key_enum_quote
 
                 #enum_struct_quote
-            };
+            });
 
             let inside_const = quote! {
+                #inside_const
+
                 #impl_struct_map_functions_quote
 
                 #impl_index
@@ -62,7 +65,7 @@ pub(crate) fn generate_struct_code(
                 #impl_deserialize
             };
 
-            Ok((out_of_const, inside_const))
+            Ok((outside_const, Some(inside_const)))
         }
         _ => Err(()),
     }

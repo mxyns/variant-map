@@ -57,7 +57,6 @@ use syn::spanned::Spanned;
 // TODO [x] choose map/table implementation with a derive attribute
 // TODO [3/3] cleanup -derive code, split into functions, into different files
 // TODO [2/2] handle generics + bounds
-// TODO [1/2] add struct and array versions of the "map"
 // TODO [x] handle generics on struct
 // TODO [x] (de)serialize derive on struct
 // TODO [x] add (de)serialize impl only if some attribute is set
@@ -65,11 +64,14 @@ use syn::spanned::Spanned;
 // TODO [x] split EnumMap and EnumStruct derive into 2 functions with different attributes
     // TODO [x] move declared structs
 // TODO [x] rename crate to something unused
-// TODO check if serde rename is needed in keys
-// TODO no visibility specified means => inside const _ =
+// TODO [x] check if serde rename is needed in keys
 // TODO [x] doc
+// TODO fix "private documentation" rustdoc
+// TODO [x] specify out-of-scope visibility => inside const _ =
+// TODO give custom derive on structmap
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
+// TODO [1/2] add struct and array versions of the "map"
 // TODO? trait for all maps to reduce duplicate code
 // TODO? tight couple Map trait and MapValue if possible
 
@@ -84,15 +86,17 @@ use syn::spanned::Spanned;
 /// default is `HashMap`
 ///
 ///
-/// `keys` : specify the name of the generated enum of keys
+/// `keys` : specify the parameters for the generated enum of keys
 ///
-/// default is {EnumName}Key
+/// see [attrs::BaseKeysAttr]
 ///
 ///
 /// `visibility` : specify the [Visibility][::syn::Visibility] of the generated enums / structs
 /// associated to the target enum
 ///
-/// default is private
+/// default (None) is private
+///
+/// Specify `visibility = "out-of-scope"` to make the types unreachable without using the `MapValue` trait from `variant_map`
 ///
 /// See example in [BaseAttr]
 ///
@@ -130,7 +134,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let (out_of_const, inside_const) = match result {
         Ok( tup ) => tup,
-        Err(_) => (syn::Error::new(ast.span(), "VariantStore works only on enums").into_compile_error(), quote!())
+        Err(_) => (Some(syn::Error::new(ast.span(), "VariantStore works only on enums").into_compile_error()), None)
     };
 
     let result = quote! {

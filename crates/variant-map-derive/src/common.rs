@@ -1,4 +1,4 @@
-use crate::attrs::{KeyNameAttr, MapType, BaseAttr};
+use crate::attrs::{KeyNameAttr, MapType, BaseAttr, OptionalVisibility};
 use darling::FromVariant;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -23,26 +23,28 @@ pub(crate) fn generate_key_enum(
 
         // Useful in case of variant identifier renaming
         let key_name = key_name_attr.key_name(variant);
-        let serde_rename = key_name_attr.serde_rename(variant);
+        let serde_rename = key_name_attr.serde_rename().as_ref().map(|name| quote!{
+            #[serde(rename=#name)]
+        });
 
         quote! {
-            #[serde(rename=#serde_rename)]
+            #serde_rename
 
 
             #key_name
         }
     });
 
-    // TODO cleanup useless derives, check if serde derives and #[serde(rename)] attributes are required on keys
+    let derives = map_attr.keys_derive();
     let derives_quote = match map_type {
         MapType::HashMap => {
-            quote! { #[derive(Debug, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize)] }
+            quote! { #[derive(Debug, PartialEq, Eq, Hash, #derives)] }
         }
         MapType::BTreeMap => {
-            quote! { #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde::Serialize, ::serde::Deserialize)] }
+            quote! { #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, #derives)] }
         }
         MapType::Struct => {
-            quote! {#[derive(Debug, ::serde::Serialize, ::serde::Deserialize)] }
+            quote! {#[derive(Debug, #derives)] }
         }
     };
 
@@ -53,6 +55,26 @@ pub(crate) fn generate_key_enum(
         #vis enum #key_enum_name {
             #(#key_variants),*
         }
+    }
+}
+
+/// Decide whether the input should be in scope or not
+///
+/// # Arguments
+///
+/// `visibility`: used to determine if the provided input should be in or out of scope.
+///
+/// `possibly_outside`: input that was supposed to be in scope, but may be moved out of it.
+///
+/// # Returns
+///
+/// (stay_in_scope, out_of_scope): (Option<T>, Option<T>)
+pub(crate) fn in_or_out_scope<T>(visibility: &OptionalVisibility, possibly_in_scope: T) -> (Option<T>, Option<T>) {
+
+    if let &OptionalVisibility::OutOfScope = &visibility {
+        (None, Some(possibly_in_scope))
+    } else {
+        (Some(possibly_in_scope), None)
     }
 }
 
