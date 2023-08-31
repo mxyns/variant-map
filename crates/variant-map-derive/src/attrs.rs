@@ -110,7 +110,6 @@ pub(crate) enum OptionalVisibility {
 
 impl Default for OptionalVisibility {
     fn default() -> Self {
-        /// Default is private / inherited
         Self::Specified(Visibility::Inherited)
     }
 }
@@ -200,14 +199,13 @@ impl BaseAttr {
     }
 
     pub(crate) fn keys_derive(&self) -> Option<TokenStream> {
-        self.keys
+        let path_list = self.keys
             .as_ref()
             .map(|attrs| attrs.derive.as_ref())
-            .flatten()
-            .map(|list| {
-                let quotes = list.iter().map(|v| v.into_token_stream());
-                quote!{ #(#quotes),* }
-            })
+            .flatten();
+
+        get_derives(path_list)
+
     }
 
     pub(crate) fn map_type(&self) -> MapType {
@@ -217,6 +215,13 @@ impl BaseAttr {
             MapType::default()
         }
     }
+}
+
+pub(crate) fn get_derives(path_list: Option<&PathList>) -> Option<TokenStream> {
+    path_list.map(|list| {
+        let quotes = list.iter().map(|v| v.into_token_stream());
+        quote!{ #(#quotes),* }
+    })
 }
 
 
@@ -276,6 +281,8 @@ impl Deref for MapAttr {
 ///
 /// `name` : name of the generated struct
 ///
+/// `derive`: additional derives on the `StructMap`
+///
 /// `features` : list of features (see [features][StructMapFeaturesAttr])
 ///
 /// # Example
@@ -283,9 +290,9 @@ impl Deref for MapAttr {
 /// ```
 /// use variant_map_derive::VariantStore;
 ///
-/// #[derive(VariantStore)]
+/// #[derive(Clone, VariantStore)]
 /// #[VariantStore(datastruct = "StructMap")]
-/// #[VariantStruct(name = "MySuperStruct", features(serialize, index))]
+/// #[VariantStruct(name = "MySuperStruct", features(serialize, index), derive(Clone))]
 /// enum MyEnum {
 ///     A(i32)
 /// }
@@ -303,6 +310,7 @@ pub(crate) struct StructAttr {
     #[darling(skip)]
     base: BaseAttr,
     name: Option<String>,
+    derive: Option<PathList>,
     pub(crate) features: StructMapFeaturesAttr,
 }
 
@@ -320,6 +328,10 @@ impl StructAttr {
         } else {
             format_ident!("{}StructMap", enum_type.enum_name)
         }
+    }
+
+    pub(crate) fn derives(&self) -> Option<TokenStream> {
+        get_derives(self.derive.as_ref())
     }
 }
 

@@ -83,9 +83,9 @@ pub fn generic_enum() {
 /// A classic enum with unit and tuple variants
 /// Custom Struct with a field per variant for this enum is derived and used
 pub fn normal_enum_struct_map() {
-    #[derive(Debug, Serialize, Deserialize, VariantStore)]
+    #[derive(Debug, Clone, Serialize, Deserialize, VariantStore)]
     #[VariantStore(datastruct = "StructMap", keys(name = "TestKeys", derive(::serde::Serialize, ::serde::Deserialize)))]
-    #[VariantStruct(features(index, serialize, deserialize))]
+    #[VariantStruct(derive(Clone), features(index, serialize, deserialize))]
     enum TestEnum {
         A,
         B,

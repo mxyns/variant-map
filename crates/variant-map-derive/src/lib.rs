@@ -68,7 +68,7 @@ use syn::spanned::Spanned;
 // TODO [x] doc
 // TODO fix "private documentation" rustdoc
 // TODO [x] specify out-of-scope visibility => inside const _ =
-// TODO give custom derive on structmap
+// TODO [x] give custom derive on structmap
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
 // TODO [1/2] add struct and array versions of the "map"

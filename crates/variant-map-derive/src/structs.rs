@@ -359,9 +359,10 @@ pub(crate) fn generate_enum_struct_code(
     );
 
     let vis = &map_attr.visibility;
+    let derives = map_attr.derives();
     quote! {
         #[automatically_derived]
-        #[derive(Debug)]
+        #[derive(Debug, #derives)]
         #[allow(non_snake_case)]
         #vis struct #struct_name #type_generics #where_clause  {
             #fields
