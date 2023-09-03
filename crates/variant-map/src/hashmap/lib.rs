@@ -12,7 +12,7 @@ use crate::common::MapValue;
 
 /// [Map] wrapping a [HashMap] used as associated [Map][crate::common::MapValue::Map]
 /// Keys must implement [HashKey]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Map<Key, Value>
 where
     Key: HashKey,

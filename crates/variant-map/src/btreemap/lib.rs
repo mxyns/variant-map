@@ -17,7 +17,7 @@ pub trait OrdHashKey: Ord + Eq + Hash {}
 
 /// [Map] wrapping a [BTreeMap] used as associated [Map][crate::common::MapValue::Map]
 /// Keys must implement [OrdHashKey]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Map<Key, Value>
 where
     Key: OrdHashKey,

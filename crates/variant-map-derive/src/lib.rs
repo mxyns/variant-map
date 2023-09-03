@@ -62,24 +62,7 @@ use syn::spanned::Spanned;
 ///
 /// # Arguments
 ///
-/// `datastruct` : any of { `HashMap`, `BTreeMap`, `StructMap` }
-///
-/// default is `HashMap`
-///
-///
-/// `keys` : specify the parameters for the generated enum of keys
-///
-/// see [attrs::BaseKeysAttr]
-///
-///
-/// `visibility` : specify the [Visibility][::syn::Visibility] of the generated enums / structs
-/// associated to the target enum
-///
-/// default (None) is private
-///
-/// Specify `visibility = "out-of-scope"` to make the types unreachable without using the `MapValue` trait from `variant_map`
-///
-/// See example in [attrs::BaseAttr]
+/// See [attrs::BaseAttr]
 ///
 /// See other attributes in [attrs]
 ///
