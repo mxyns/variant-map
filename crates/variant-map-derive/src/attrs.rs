@@ -60,7 +60,7 @@ impl KeyNameAttr {
 ///
 /// `keys` : specify the parameters for the generated enum of keys
 ///
-/// see [attrs::BaseKeysAttr]
+/// see [crate::attrs::BaseKeysAttr]
 ///
 ///
 /// `visibility` : specify the [Visibility][::syn::Visibility] of the generated enums / structs

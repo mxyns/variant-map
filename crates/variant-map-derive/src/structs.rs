@@ -95,7 +95,7 @@ pub(crate) fn where_clause_add_enum_bound(where_clause: Option<&WhereClause>, en
 ///
 /// Adds a bound on generics for [Serialize][serde::Serialize] on the impl block
 ///
-/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `serialize`
+/// Implemented only if the `StructMap` has the [feature][crate::attrs::StructMapFeaturesAttr] `serialize`
 pub(crate) fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
     let EnumType {
         enum_name,
@@ -141,7 +141,7 @@ pub(crate) fn generate_impl_serialize(struct_name: &Ident, enum_type: &EnumType,
 ///
 /// The visitor for the deserialization is called `__VariantStore__StructMap__{EnumName}__Visitor`, make sure there are collisions too
 ///
-/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `deserialize`
+/// Implemented only if the `StructMap` has the [feature][crate::attrs::StructMapFeaturesAttr] `deserialize`
 fn generate_impl_deserialize(struct_name: &Ident, enum_type: &EnumType, enum_data: &DataEnum, key_enum_name: &Ident) -> TokenStream {
     let EnumType {
         enum_name,
@@ -381,7 +381,7 @@ pub(crate) fn generate_enum_struct_code(
 
 /// Implements [Index][std::ops::Index] and [IndexMut][std::ops::IndexMut] for the `StructMap`
 ///
-/// Implemented only if the `StructMap` has the [feature][StructMapFeaturesAttr] `index`
+/// Implemented only if the `StructMap` has the [feature][crate::attrs::StructMapFeaturesAttr] `index`
 pub(crate) fn generate_impl_index(
     enum_type: &EnumType,
     enum_data: &DataEnum,

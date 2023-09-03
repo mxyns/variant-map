@@ -68,7 +68,7 @@ pub(crate) fn generate_key_enum(
 ///
 /// # Returns
 ///
-/// (stay_in_scope, out_of_scope): (Option<T>, Option<T>)
+/// `(stay_in_scope, out_of_scope): (Option<T>, Option<T>)`
 pub(crate) fn in_or_out_scope<T>(visibility: &OptionalVisibility, possibly_in_scope: T) -> (Option<T>, Option<T>) {
 
     if let &OptionalVisibility::OutOfScope = &visibility {

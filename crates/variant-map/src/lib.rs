@@ -4,8 +4,13 @@
 //! As those data structures are maps, they store one value of each variant.
 //! All Maps are [serde::Serialize]-able and [serde::Deserialize]-able
 //!
-//! Those maps can be generated easily using the derive macros from [variant_map_derive]
-//! This crate also provide simple [macros] to reduce the lighten the syntax.
+//!
+//! Those maps can be generated easily using the derive macros from [variant_map_derive].
+//! [variant_map_derive] provides a derive macro for a `StructMap` (a struct type with a field per enum variant).
+//! [variant_map_derive] can be included using the `derive` feature on [variant_map][crate]
+//!
+//!
+//! This crate also provide simple [macros] to lighten the syntax.
 //!
 //!
 //! # Example

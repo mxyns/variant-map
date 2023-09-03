@@ -1,6 +1,6 @@
 //! Enum variants stored in Maps.
 //!
-//! Provides derive macros for [variant_map]
+//! Provides derive macros for `variant_map`
 //!
 //! Includes a `StructMap` which is a struct with a field per variant of the enum
 //!
@@ -21,7 +21,6 @@
 //! ```
 //!
 //! For more detailed examples check out the [example project](https://github.com/mxyns/variant-map/tree/master/example) on this crates' [repo](https://github.com/mxyns/variant-map/)
-//!
 //!
 
 /// Parameters of the macros attributes
@@ -50,25 +49,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 use syn::spanned::Spanned;
 
-// TODO [x] rename keys and key enum
-// TODO [x] merge make_map with impl EnumMapValue
-// TODO [x] macro_rules for key and map syntactic sugar
-// TODO [x] Index and IndexMut syntactic sugar
-// TODO [x] choose map/table implementation with a derive attribute
-// TODO [3/3] cleanup -derive code, split into functions, into different files
-// TODO [2/2] handle generics + bounds
-// TODO [x] handle generics on struct
-// TODO [x] (de)serialize derive on struct
-// TODO [x] add (de)serialize impl only if some attribute is set
-// TODO [x] custom visibility on keys, struct, impls, etc.
-// TODO [x] split EnumMap and EnumStruct derive into 2 functions with different attributes
-    // TODO [x] move declared structs
-// TODO [x] rename crate to something unused
-// TODO [x] check if serde rename is needed in keys
-// TODO [x] doc
 // TODO fix "private documentation" rustdoc
-// TODO [x] specify out-of-scope visibility => inside const _ =
-// TODO [x] give custom derive on structmap
 // TODO publish
 // TODO allow using user generated (possibly generic or tuple variant) keys
 // TODO [1/2] add struct and array versions of the "map"
@@ -98,7 +79,7 @@ use syn::spanned::Spanned;
 ///
 /// Specify `visibility = "out-of-scope"` to make the types unreachable without using the `MapValue` trait from `variant_map`
 ///
-/// See example in [BaseAttr]
+/// See example in [attrs::BaseAttr]
 ///
 /// See other attributes in [attrs]
 ///
