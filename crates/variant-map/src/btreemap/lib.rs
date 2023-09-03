@@ -175,3 +175,25 @@ where
         self.inner.get_mut(&index).unwrap()
     }
 }
+
+impl<'a, Key, Value> IntoIterator for &'a Map<Key, Value>
+    where
+        Key: OrdHashKey {
+    type Item = <&'a BTreeMap<Key, Value> as IntoIterator>::Item;
+    type IntoIter = <&'a BTreeMap<Key, Value> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.inner).into_iter()
+    }
+}
+
+impl<'a, Key, Value> IntoIterator for &'a mut Map<Key, Value>
+    where
+        Key: OrdHashKey {
+    type Item = <&'a mut BTreeMap<Key, Value> as IntoIterator>::Item;
+    type IntoIter = <&'a mut BTreeMap<Key, Value> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&mut self.inner).into_iter()
+    }
+}

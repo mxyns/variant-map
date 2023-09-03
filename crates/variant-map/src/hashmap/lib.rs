@@ -14,8 +14,8 @@ use crate::common::MapValue;
 /// Keys must implement [HashKey]
 #[derive(Debug, Clone)]
 pub struct Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     inner: HashMap<Key, Value>,
 }
@@ -25,13 +25,13 @@ where
 pub trait HashKey: Eq + Hash {}
 
 impl<K, V> Map<K, V>
-where
-    K: HashKey,
-{
-    pub fn insert(&mut self, value: V) -> Option<V>
     where
         K: HashKey,
-        V: MapValue<Key = K>,
+{
+    pub fn insert(&mut self, value: V) -> Option<V>
+        where
+            K: HashKey,
+            V: MapValue<Key=K>,
     {
         let key: K = value.to_key();
         self.inner.insert(key, value)
@@ -39,8 +39,8 @@ where
 }
 
 impl<Key, Value> From<HashMap<Key, Value>> for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     fn from(value: HashMap<Key, Value>) -> Self {
         Map::new(value)
@@ -48,8 +48,8 @@ where
 }
 
 impl<Key, Value> Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     pub fn new(map: HashMap<Key, Value>) -> Self {
         Map { inner: map }
@@ -57,8 +57,8 @@ where
 }
 
 impl<Key, Value> Default for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     fn default() -> Self {
         Map {
@@ -68,13 +68,13 @@ where
 }
 
 impl<Key, Value> Serialize for Map<Key, Value>
-where
-    Key: HashKey,
-    Value: Serialize,
+    where
+        Key: HashKey,
+        Value: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+        where
+            S: Serializer,
     {
         let mut map = serializer.serialize_seq(Some(self.len()))?;
 
@@ -87,16 +87,16 @@ where
 }
 
 struct MapVisitor<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     marker: PhantomData<fn() -> Map<Key, Value>>,
 }
 
 impl<'de, Key, Value> Visitor<'de> for MapVisitor<Key, Value>
-where
-    Key: HashKey,
-    Value: MapValue<Key = Key> + DeserializeOwned,
+    where
+        Key: HashKey,
+        Value: MapValue<Key=Key> + DeserializeOwned,
 {
     type Value = Map<Key, Value>;
 
@@ -105,8 +105,8 @@ where
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
+        where
+            A: SeqAccess<'de>,
     {
         let map_size = seq.size_hint().unwrap_or(0);
         let mut map: HashMap<Key, Value> = HashMap::<Key, Value>::with_capacity(map_size);
@@ -121,13 +121,13 @@ where
 }
 
 impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
-where
-    Key: HashKey,
-    Value: MapValue<Key = Key> + DeserializeOwned,
+    where
+        Key: HashKey,
+        Value: MapValue<Key=Key> + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
     {
         let visitor = MapVisitor::<Key, Value> {
             marker: PhantomData,
@@ -137,8 +137,8 @@ where
 }
 
 impl<Key, Value> Deref for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     type Target = HashMap<Key, Value>;
 
@@ -148,8 +148,8 @@ where
 }
 
 impl<Key, Value> DerefMut for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -157,8 +157,8 @@ where
 }
 
 impl<Key, Value> Index<Key> for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     type Output = Value;
 
@@ -168,10 +168,32 @@ where
 }
 
 impl<Key, Value> IndexMut<Key> for Map<Key, Value>
-where
-    Key: HashKey,
+    where
+        Key: HashKey,
 {
     fn index_mut(&mut self, index: Key) -> &mut Self::Output {
         self.inner.get_mut(&index).unwrap()
+    }
+}
+
+impl<'a, Key, Value> IntoIterator for &'a Map<Key, Value>
+    where
+        Key: HashKey {
+    type Item = <&'a HashMap<Key, Value> as IntoIterator>::Item;
+    type IntoIter = <&'a HashMap<Key, Value> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.inner).into_iter()
+    }
+}
+
+impl<'a, Key, Value> IntoIterator for &'a mut Map<Key, Value>
+    where
+        Key: HashKey {
+    type Item = <&'a mut HashMap<Key, Value> as IntoIterator>::Item;
+    type IntoIter = <&'a mut HashMap<Key, Value> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&mut self.inner).into_iter()
     }
 }
