@@ -12,7 +12,7 @@ Con: Restricted API
 
 # Example
 
- ```
+ ```rust
      use variant_map_derive::VariantStore;
 
      #[derive(VariantStore)]
