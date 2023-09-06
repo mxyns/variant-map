@@ -2,6 +2,11 @@
 name = "variant-map-derive"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["struct", "enum", "variant", "map", "store"]
+categories = ["data-structures"]
+description = "derive macro for the variant-map crate, adds another type called StructMap"
+repository = "https://github.com/mxyns/variant-map"
 
 [lib]
 proc-macro = true
