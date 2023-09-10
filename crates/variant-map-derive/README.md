@@ -12,15 +12,15 @@ Con: Restricted API
 
 # Example
 
- ```rust
-     use variant_map_derive::VariantStore;
+```rust
+ use variant_map_derive::VariantStore;
 
-     #[derive(VariantStore)]
-     enum MyEnum {
-         A,
-         B(i32),
-     }
- ```
+ #[derive(VariantStore)]
+ enum MyEnum {
+     A,
+     B(i32),
+ }
+```
 
 For more detailed examples check out the [example project](https://github.com/mxyns/variant-map/tree/master/example) on
 this crates' [repo](https://github.com/mxyns/variant-map/)

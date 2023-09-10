@@ -18,22 +18,22 @@ This crate also provide simple **macros** to lighten the syntax with the `macros
 
  # Example
 
- ```
-     use variant_map_derive::VariantStore;
+```rust
+ use variant_map_derive::VariantStore;
 
-     #[derive(VariantStore)]
-     enum MyEnum {
-         A,
-         B(i32),
-     }
+ #[derive(VariantStore)]
+ enum MyEnum {
+     A,
+     B(i32),
+ }
 
-     fn main() {
-         use variant_map::{as_key, as_map};
-         let mut map = <as_map!(MyEnum)>::default();
-         let _: &MyEnum = map.get(&<as_key!(MyEnum)>::A).unwrap();
-         let _: &MyEnum = map.get(&MyEnumKey::A).unwrap();
-         map[&MyEnumKey::B] = MyEnum::B(69);
-     }
+ fn main() {
+     use variant_map::{as_key, as_map};
+     let mut map = <as_map!(MyEnum)>::default();
+     let _: &MyEnum = map.get(&<as_key!(MyEnum)>::A).unwrap();
+     let _: &MyEnum = map.get(&MyEnumKey::A).unwrap();
+     map[&MyEnumKey::B] = MyEnum::B(69);
+ }
  ```
 
 For detailed examples check out the [example project](https://github.com/mxyns/variant-map/tree/master/example) on this crates' [repo](https://github.com/mxyns/variant-map/)
