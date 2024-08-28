@@ -13,7 +13,7 @@ Those maps can be generated easily using the derive macros from [variant_map_der
 
 This crate also provide simple **macros** to lighten the syntax with the `macros` feature.
 
-## Main crate (GUI App)
+## Main crate
 [variant-map](/crates/variant-map)
 
  # Example
